@@ -18,38 +18,38 @@ namespace nodepp { namespace type {
 
     struct false_type { static constexpr bool value = false; using type = false_type; };
     struct true_type  { static constexpr bool value = true;  using type = true_type;  };
-    
+
     /*─······································································─*/
 
     template <bool B, typename T, typename F> struct conditional { using type = T; };
     template <typename T, typename F> struct conditional<false, T, F> { using type = F; };
-    
+
     /*─······································································─*/
 
     template <bool B, typename T = void> struct enable_if {};
     template <typename T> struct enable_if<true, T> { using type = T; };
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_array : false_type {};
     template <typename T> struct is_array<T[]> : true_type {};
     template <typename T, ulong N> struct is_array<T[N]> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T, typename U> struct is_same : false_type {};
     template <typename T> struct is_same<T, T> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T, typename U> struct is_different : true_type {};
     template <typename T> struct is_different<T, T> : false_type {};
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_pointer : false_type {};
     template <typename T> struct is_pointer<T*> : true_type {};
-        
+
     /*─······································································─*/
 
     template <typename T> struct is_void : false_type {};
@@ -61,7 +61,7 @@ namespace nodepp { namespace type {
     template <> struct is_void<const void> : true_type {};
 
     template <> struct is_void<void> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T, T v> struct integral_constant {
@@ -73,7 +73,7 @@ namespace nodepp { namespace type {
         constexpr operator value_type()   const noexcept { return value; }
         constexpr value_type operator()() const noexcept { return value; }
     };
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_character : false_type {};
@@ -81,7 +81,7 @@ namespace nodepp { namespace type {
     template <> struct is_character<char> : true_type {};
 
     template <> struct is_character<uchar> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_integral : false_type {};
@@ -123,7 +123,7 @@ namespace nodepp { namespace type {
     template <> struct is_floating_point<double> : true_type {};
 
     template <> struct is_floating_point<ldouble> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_cr : false_type {};
@@ -131,19 +131,19 @@ namespace nodepp { namespace type {
     template <typename T> struct is_cr<const T&> : true_type {};
 
     template <typename T> struct is_cr<const T&&> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_const : false_type {};
 
     template <typename T> struct is_const<const T> : true_type {};
-    
+
     /*────────────────────────────────────────────────────────────────────────────*/
 
     template <typename T> struct is_volatile : false_type {};
 
     template <typename T> struct is_volatile<volatile T> : true_type {};
-    
+
     /*────────────────────────────────────────────────────────────────────────────*/
 
     template <typename T> struct is_reference : false_type {};
@@ -151,19 +151,19 @@ namespace nodepp { namespace type {
     template <typename T> struct is_reference<T&> : true_type {};
 
     template <typename T> struct is_reference<T&&> : true_type {};
-    
+
     /*────────────────────────────────────────────────────────────────────────────*/
 
     template <typename T> struct is_lvalue_reference : false_type {};
 
     template <typename T> struct is_lvalue_reference<T&> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T> struct is_rvalue_reference : false_type {};
 
     template <typename T> struct is_rvalue_reference<T&&> : true_type {};
-    
+
     /*─······································································─*/
 
     template <typename T, ulong N = 0> struct add_extent { typedef T type[N]; };
@@ -171,13 +171,13 @@ namespace nodepp { namespace type {
     template <typename T> struct add_extent<T[], 0> { typedef T type[]; };
 
     template <typename T, ulong N> struct add_extent<T[], N> { typedef T type[N]; };
-    
+
     /*─······································································─*/
 
     template <typename T> struct remove_extent { typedef T type; };
 
     template <typename T, ulong N> struct remove_extent<T[N]> { typedef T type; };
-    
+
     /*─······································································─*/
 
     template<typename T> struct add_const { using type = const T; };
@@ -185,7 +185,7 @@ namespace nodepp { namespace type {
     template<typename T> struct remove_const { using type = T; };
 
     template<typename T> struct remove_const<const T> { using type = T; };
-    
+
     /*─······································································─*/
 
     template<typename T> struct add_volatile { using type = volatile T; };
@@ -193,7 +193,7 @@ namespace nodepp { namespace type {
     template<typename T> struct remove_volatile { using type = T; };
 
     template<typename T> struct remove_volatile<volatile T> { using type = T; };
-    
+
     /*─······································································─*/
 
     template<typename T> struct remove_reference { using type = T; };
@@ -211,7 +211,7 @@ namespace nodepp { namespace type {
     template<typename T> typename remove_reference<T>::type&& forward(T&& arg) { return move(arg); }
 
     template<typename T> typename remove_reference<T>::type&  forward(T& arg) { return copy(arg); }
-    
+
     /*─······································································─*/
 
     template<typename T> struct add_pointer { using type = T*; };
@@ -225,13 +225,13 @@ namespace nodepp { namespace type {
     template<typename T> struct remove_pointer<T* volatile> { using type = T; };
 
     template<typename T> struct remove_pointer<T* const volatile> { using type = T; };
-    
+
     /*─······································································─*/
-    
+
     template<typename T> struct add_cv { using type = const volatile T; };
 
     template<typename T> struct remove_cv { using type = typename remove_volatile<typename remove_const<T>::type>::type; };
-    
+
     /*─······································································─*/
 
     template<typename T> struct add_lvalue_reference { using type = T&; };
@@ -241,7 +241,7 @@ namespace nodepp { namespace type {
     template<typename T> typename add_rvalue_reference<T>::type add_rvalue_reference_fn(T&& t) { return static_cast<typename add_rvalue_reference<T>::type>(t); };
 
     template<typename T> struct add_reference : public conditional<is_lvalue_reference<T>::value, add_lvalue_reference<typename remove_reference<T>::type>, add_rvalue_reference<typename remove_reference<T>::type>>::type {};
-    
+
     /*─······································································─*/
 
     template<typename T> void swap( T& a, T& b ) noexcept { T temp = a; a = b; b = temp; }
@@ -291,7 +291,7 @@ namespace nodepp { namespace type {
     };
 
     /*─······································································─*/
-    
+
     template< typename... Ts > struct get_size {
         static constexpr ulong value = sizeof...(Ts);
     };
@@ -308,15 +308,15 @@ namespace nodepp { namespace type {
     struct is_member_pointer<T (U::*)()> : true_type {};
 
     /*─······································································─*/
-    
+
     template< int V, typename... Ts > struct is_greater_than {
         static constexpr bool value = sizeof...(Ts) > V;
     };
-    
+
     template< int V, typename... Ts > struct is_lower_than {
         static constexpr bool value = sizeof...(Ts) < V;
     };
-    
+
     template< int V, typename... Ts > struct is_equal_to {
         static constexpr bool value = sizeof...(Ts) == V;
     };
@@ -327,9 +327,11 @@ namespace nodepp { namespace type {
         static constexpr bool value = __is_trivially_constructible(T);
     };
 
+    /*
     template<typename T> struct is_trivially_destructible {
         static constexpr bool value = __has_trivial_destructor(T);
     };
+    */
 
     template<typename T> struct is_virtually_destructible {
         static constexpr bool value = __has_virtual_destructor(T);
@@ -339,9 +341,11 @@ namespace nodepp { namespace type {
         static constexpr bool value = __is_trivially_copyable(T);
     };
 
+    /*
     template<typename T> struct is_trivially_assigned {
         static constexpr bool value = __has_trivial_assign(T);
     };
+    */
 
     template<typename T, typename V> struct is_trivially_assignable {
         static constexpr bool value = __is_trivially_assignable(T,V);
@@ -388,7 +392,7 @@ namespace nodepp { namespace type {
 
     /*─······································································─*/
 
-    template< typename T, ulong N > 
+    template< typename T, ulong N >
     struct list { T buffer[N];
 
         const T  operator []( ulong i ) const noexcept { return       buffer[i%N]; }
