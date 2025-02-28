@@ -4,7 +4,7 @@ Nodepp is a groundbreaking open-source project that simplifies C++ application d
 
 One of the standout features of Nodepp is its 100% asynchronous architecture, powered by an internal Event Loop. This design efficiently manages Nodepp’s tasks, enabling you to develop scalable and concurrent applications with minimal code. Experience the power and flexibility of Nodepp as you streamline your development process and create robust applications effortlessly!
 
-## Dependencies 
+## Dependencies
 ```bash
 #emscripten
     🪟: pacman -S mingw-w64-ucrt-x86_64-emscripten
@@ -32,8 +32,9 @@ One of the standout features of Nodepp is its 100% asynchronous architecture, po
 ## Build & Run
 
 ```bash
-em++ -o www/index.html main.cpp \
+em++ -o www/index.html main.cpp           \
      -I ./include -pthread -lwebsocket.js \
+    --shell-file ./shell.html --bind      \
      -s WEBSOCKET_SUBPROTOCOL=1 \
      -s PTHREAD_POOL_SIZE=8     \
      -s WEBSOCKET_URL=1         \
@@ -95,7 +96,7 @@ using namespace nodepp;
 void onMain() {
 
     auto srv = ws::connect( "wss://localhost:8000" );
-    
+
     srv.onConnect([=]( ws_t cli ){
 
         cli.onData([]( string_t data ){
@@ -118,10 +119,10 @@ void onMain() {
 - 🔗: [NodePP for Arduino](https://github.com/NodeppOfficial/nodepp-arduino)
 - 🔗: [Nodepp for ESP32](https://github.com/NodeppOfficial/nodepp-ESPXX)
 - 🔗: [Nodepp for WASM](https://github.com/NodeppOfficial/nodepp-wasm)
- 
+
 ## FAQ
 - 🔗: [/r/Nodepp/](https://www.reddit.com/r/Nodepp/comments/1eaq1pu/faq_ask_anything_about_nodepp/)
-  
+
 ## Contribution
 
 If you want to contribute to **Nodepp**, you are welcome to do so! You can contribute in several ways:

@@ -10,27 +10,19 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #pragma once
+#include <emscripten/emscripten.h>
+#include <emscripten/bind.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace process { namespace env {
+#define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, &CALLBACK );
+#define BIND_BEGIN( MODULE ) EMSCRIPTEN_BINDINGS( MODULE ) {
+#define BIND_END() }
 
-    int set( const string_t& name, const string_t& value ){ return setenv( name.c_str(), value.c_str(), 1 ); }
+/*────────────────────────────────────────────────────────────────────────────*/
 
-    string_t get( const string_t& name ){ return getenv( name.c_str() ); }
-
-    int del( const string_t& name ){ return unsetenv( name.c_str() ); }
-
-}   /*─······································································─*/
-
-    bool  is_child(){ return !env::get("CHILD").empty(); }
-
-    bool is_parent(){ return env::get("CHILD").empty(); }
-
-    string_t shell(){ return env::get("SHELL"); }
-
-    string_t  home(){ return env::get("HOME"); }
-
-}}
+#define BIND( MODULE, NAME, CALLBACK ) EMSCRIPTEN_BINDINGS( MODULE ) { \
+    emscripten::function( NAME, CALLBACK );                            \
+}
 
 /*────────────────────────────────────────────────────────────────────────────*/
