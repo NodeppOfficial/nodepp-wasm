@@ -126,11 +126,12 @@ public: ws_t() noexcept : obj( new NODE() ){}
         return emscripten_websocket_send_binary( obj->fd, msg.get(), msg.size() );
     }
 
-};}
+}; using tcp_t = ws_t; }
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace ws {
+    ws_t  client( const string_t& url ) { return ws_t(url); }
     ws_t connect( const string_t& url ) { return ws_t(url); }
 }}
 
