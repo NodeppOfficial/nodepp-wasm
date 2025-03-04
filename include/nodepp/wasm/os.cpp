@@ -16,6 +16,12 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace os {
+
+    void exec( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+
+    void call( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+
+    /*─······································································─*/
     
     void exit( int err=0 ){ ::exit(err); }
 

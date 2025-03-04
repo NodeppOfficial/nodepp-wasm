@@ -16,7 +16,8 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, &CALLBACK );
-#define BIND_BEGIN( MODULE ) EMSCRIPTEN_BINDINGS( MODULE ) {
+#define BIND_BEGIN( MODULE ) EMSCRIPTEN_BINDINGS( MODULE ){
+#define BIND_RUN(...) emscripten_run_script( #__VA_ARGS__ )
 #define BIND_END() }
 
 /*────────────────────────────────────────────────────────────────────────────*/
