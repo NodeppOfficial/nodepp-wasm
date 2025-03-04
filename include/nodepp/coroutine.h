@@ -80,6 +80,7 @@ template< class T > T clamp( const T& val, const T& _min, const T& _max ){ retur
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #define _JSON_(...) json::parse(_STRING_(__VA_ARGS__))
+#define JSBRIDGE EMSCRIPTEN_KEEPALIVE
 #define _FUNC_  __PRETTY_FUNCTION__
 #define _STRING_(...) #__VA_ARGS__
 #define _NAME_  __FUNCTION__
