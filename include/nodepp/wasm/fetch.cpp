@@ -45,9 +45,9 @@ namespace nodepp { namespace _fetch_ {
         auto res = dta[0]->data.as<function_t<void,fetch_t>>();
                    dta[2]->data.as<function_t<void>>()();
 
-        if( fetch->status == 0 ){ 
-            rej( except_t( "Something Went Wrong" ) ); 
-            emscripten_fetch_close( fetch ); return; 
+        if( fetch->status == 0 ){
+            rej( except_t( "Something Went Wrong" ) );
+            emscripten_fetch_close( fetch ); return;
         }
 
         fetch_t result;
@@ -72,21 +72,21 @@ namespace nodepp { namespace _fetch_ {
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace fetch {
-    
-    promise_t<fetch_t,except_t> add ( const fetch_t& fetch ) { 
-           auto ctx = type::bind( fetch ); 
+
+    promise_t<fetch_t,except_t> add ( const fetch_t& fetch ) {
+           auto ctx = type::bind( fetch );
     return promise_t<fetch_t,except_t>([=]( function_t<void,fetch_t> res, function_t<void,except_t> rej ){
 
-        if( !url::is_valid( ctx->url ) ){ rej(except_t("invalid URL")); return; } 
-        
-        struct NODE { 
+        if( !url::is_valid( ctx->url ) ){ rej(except_t("invalid URL")); return; }
+
+        struct NODE {
             ptr_t<bool> state = new bool(1);
             array_t<const char*> hdr;
-            queue_t<any_t> args; 
+            queue_t<any_t> args;
         }; ptr_t<NODE> obj = new NODE();
 
         function_t<void> done ([=](){ *obj->state = 0; });
-        
+
         process::add([=](){
         coStart
 
@@ -94,8 +94,8 @@ namespace nodepp { namespace fetch {
 
                 obj->args.push( res ); obj->args.push( rej ); obj->args.push( done );
 
-                emscripten_fetch_attr_t attr; 
-                emscripten_fetch_attr_init( &attr ); 
+                emscripten_fetch_attr_t attr;
+                emscripten_fetch_attr_init( &attr );
                 memcpy( attr.requestMethod, ctx->method.get(), ctx->method.size() );
 
                 if( ctx->timeout != 0 ){ attr.timeoutMSecs = ctx->timeout; }
@@ -123,6 +123,6 @@ namespace nodepp { namespace fetch {
     }); }
 
 
-}}
+} using http_t = fetch_t; }
 
 /*────────────────────────────────────────────────────────────────────────────*/

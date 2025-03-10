@@ -79,7 +79,7 @@ template< class T > T clamp( const T& val, const T& _min, const T& _max ){ retur
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define JSRUN(...) emscripten_run_script( #__VA_ARGS__ )
+#define JSRUN(...) EM_ASM( __VA_ARGS__ )
 #define JSBRIDGE EMSCRIPTEN_KEEPALIVE
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -129,7 +129,7 @@ struct generator_t { protected: int _state_ = 0; };
 
 #define ullong  unsigned long long int
 #define ulong   unsigned long int
-          
+
 #define uint8   unsigned char
 #define uint16  unsigned int
 #define uint32  unsigned long int

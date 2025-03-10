@@ -388,7 +388,7 @@ namespace nodepp { namespace type {
     /*─······································································─*/
 
     template<typename T, typename U>
-    struct pair { T first; U second; };
+    struct pair { T first; U second; }; 
 
     /*─······································································─*/
 
@@ -408,8 +408,8 @@ namespace nodepp { namespace type {
 
         ulong size()   const noexcept { return N; }
 
-    };
-
+    };  
+    
 }}
 
 /*────────────────────────────────────────────────────────────────────────────*/
