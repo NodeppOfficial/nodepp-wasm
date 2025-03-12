@@ -55,18 +55,18 @@ public: ws_t() noexcept : obj( new NODE() ){}
     event_t<except_t>  onError;
     event_t<>          onClose;
     event_t<string_t>  onData;
-    
+
     /*─······································································─*/
-    
+
     virtual ~ws_t() noexcept { if( obj.count() > 1 ) { return; } close(); }
-    
+
     /*─······································································─*/
 
     ws_t( const string_t& url ) noexcept : obj( new NODE() ) {
         auto self = type::bind( this );
 
-        if( !emscripten_websocket_is_supported() ){ 
-            _EERROR(onError,"WS not Supported"); 
+        if( !emscripten_websocket_is_supported() ){
+            _EERROR(onError,"WS not Supported");
             free(); return;
         }
 
@@ -75,7 +75,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
         attr->url                = url.c_str();
         attr->protocols          = nullptr;
         attr->createOnMainThread = EM_TRUE;
-        
+
         obj->fd = emscripten_websocket_new( &attr ); user.push( &self );
 
         process::poll::add([=](){
@@ -89,7 +89,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
                 coEnd;
             }
 
-            while( self->obj->state >= 0 ){ coNext; } self->onClose.emit(); 
+            while( self->obj->state >= 0 ){ coNext; } self->onClose.emit();
 
         coStop
         });
@@ -103,12 +103,12 @@ public: ws_t() noexcept : obj( new NODE() ){}
     /*─······································································─*/
 
     void free()  const noexcept { if( !is_available() ){ return; } obj->state=-1; }
-    
+
     void close() const noexcept { if( !is_available() ){ return; }
-        emscripten_websocket_delete( obj->fd ); 
+        emscripten_websocket_delete( obj->fd );
         free();
     }
-    
+
     /*─······································································─*/
 
     bool is_closed()    const noexcept { return obj->state<0; }
@@ -116,13 +116,13 @@ public: ws_t() noexcept : obj( new NODE() ){}
     bool is_available() const noexcept { return !is_closed(); }
 
     int get_fd()        const noexcept { return obj->fd; }
-    
+
     /*─······································································─*/
 
     string_t read( ulong /*unused*/ ) const noexcept { return nullptr; }
 
-    int write( string_t msg ) const noexcept { 
-        if( is_closed() || msg.empty() || obj->wait != 1 ){ return -1; }
+    int write( string_t msg ) const noexcept {
+        if( is_closed() || msg.empty() || obj->wait != 0 ){ return -1; }
         return emscripten_websocket_send_binary( obj->fd, msg.get(), msg.size() );
     }
 
