@@ -84,7 +84,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
             while( self->obj->wait == 0 ){
                 emscripten_websocket_get_ready_state( self->obj->fd, &self->obj->wait );
                 coNext;
-            } if( self->obj->wait > 1 ){
+            } if( self->obj->wait != 1 ) {
                 _EERROR( self->onError, "Something Went Wrong" );
                 coEnd;
             }
@@ -122,7 +122,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
     string_t read( ulong /*unused*/ ) const noexcept { return nullptr; }
 
     int write( string_t msg ) const noexcept {
-        if( is_closed() || msg.empty() || obj->wait != 0 ){ return -1; }
+        if( msg.empty() ){ return 0; } if( is_closed() ){ return -1; }
         return emscripten_websocket_send_binary( obj->fd, msg.get(), msg.size() );
     }
 
