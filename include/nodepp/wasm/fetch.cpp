@@ -36,8 +36,6 @@ namespace nodepp { namespace _fetch_ {
 
     void EVENT( emscripten_fetch_t* fetch ) {
 
-        console::log( type::cast<queue_t<any_t>>( fetch->userData )->size() );
-
         if( type::cast<queue_t<any_t>>( fetch->userData )->size() != 3 ){ return; }
 
         auto dta = *( type::cast<queue_t<any_t>>( fetch->userData ) );
