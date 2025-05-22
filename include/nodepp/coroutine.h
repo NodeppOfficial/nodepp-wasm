@@ -36,7 +36,6 @@ template< class T > T clamp( const T& val, const T& _min, const T& _max ){ retur
 
 #define coDelay(VALUE)  do { static auto tm = process::millis()+VALUE; while( process::millis() < tm ){ coNext; } tm = process::millis()+VALUE; break; } while (0)
 #define coUDelay(VALUE) do { static auto tm = process::micros()+VALUE; while( process::micros() < tm ){ coNext; } tm = process::micros()+VALUE; break; } while (0)
-#define coWait(VALUE)   do { while( !VALUE ){ coNext; } } while(0)
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -52,6 +51,7 @@ template< class T > T clamp( const T& val, const T& _min, const T& _max ){ retur
 #define coStart static int _state_ = 0; { switch(_state_) { case 0:;
 #define coEnd         do { _state_ = 0; return -1; } while (0)
 #define coStop           } _state_ = 0; return -1; }
+#define coWait(VALUE) do { coNext; } while( VALUE )
 #define coSet(VALUE)       _state_ = VALUE
 #define coGet              _state_
 
@@ -121,6 +121,10 @@ template< class T > T clamp( const T& val, const T& _min, const T& _max ){ retur
 
 #ifndef MAX_TASKS
 #define MAX_TASKS   1024
+#endif
+
+#ifndef MAX_PATH
+#define MAX_PATH    1024
 #endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
