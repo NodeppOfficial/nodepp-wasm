@@ -14,7 +14,11 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { template<class U, class V> class map_t { 
+#include "encoder.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { template<class U, class V> class map_t {
 protected:
 
     using T    = type::pair< U, V >;
@@ -25,7 +29,7 @@ protected:
         queue_t<T>  queue;
     };  ptr_t<NODE> obj;
 
-public: 
+public:
 
     template< class... O >
     map_t( const T& args, const O&... argc ) noexcept : obj(new NODE()) {
@@ -34,11 +38,11 @@ public:
     }
 
     template< ulong N >
-    map_t( const T (&args) [N] ) noexcept : obj(new NODE()) { 
+    map_t( const T (&args) [N] ) noexcept : obj(new NODE()) {
         obj->table = ptr_t<LIST>( sizeof(uchar) );
         for( auto &x: args ) { append(x); }
     }
-    
+
     map_t() noexcept : obj(new NODE()) {
         obj->table = ptr_t<LIST>( sizeof(uchar) );
     }
@@ -47,17 +51,17 @@ public:
 
     V& operator[]( const U& id ) const noexcept {
 
-        auto key = string::to_string( id ); uchar idx=0; 
-        for( auto x:key ){ idx=(idx+x)%sizeof(uchar); }
+        auto key = string::to_string( id );
+        ulong idx= encoder::hash::get(key);
         auto n   = obj->table[idx].first();
-        
+
         while( n!=nullptr ){
         auto itm = obj->queue.as(n->data); if( itm==nullptr ){ break; }
-        if ( itm->data.first==id ){ return itm->data.second; } 
+        if ( itm->data.first==id ){ return itm->data.second; }
         n = n->next; } append({ id, V() });
 
         return obj->queue.last()->data.second;
-        
+
     }
 
     /*─······································································─*/
@@ -72,14 +76,14 @@ public:
 
     bool has( const U& id ) const noexcept {
 
-        auto key = string::to_string( id ); uchar idx = 0; 
-        for( auto x:key ){ idx=(idx+x)%sizeof(uchar); }
-        auto n   = obj->table[idx].first();
-        
+        auto  key = string::to_string( id );
+        ulong idx = encoder::hash::get(key);
+        auto  n   = obj->table[idx].first();
+
         while( n!=nullptr ){
         auto itm = obj->queue.as(n->data); if( itm==nullptr ){ break; }
-        if ( itm->data.first==id ){ return true; } n = n->next; } 
-        
+        if ( itm->data.first==id ){ return true; } n = n->next; }
+
         return false;
 
     }
@@ -94,54 +98,54 @@ public:
 
     array_t<U> keys() const noexcept { array_t<U> result;
         auto x = obj->queue.first(); while( x!=nullptr ){
-            result.push( x->data.first ); x=x->next; 
+            result.push( x->data.first ); x=x->next;
         }   return result;
     }
-    
+
     /*─······································································─*/
 
     template< class... O >
     void clear( const U& argc, const O&... args ) const noexcept {
-         iterator::map([&](U arg){ erase(arg); }, argc, args... ); 
+         iterator::map([&](U arg){ erase(arg); }, argc, args... );
     }
 
     void erase( const U& id ) const noexcept {
 
-        auto key = string::to_string( id ); uchar idx = 0; 
-        for( auto x:key ){ idx=(idx+x)%sizeof(uchar); }
-        auto n   = obj->table[idx].first();
-        
+        auto  key = string::to_string( id );
+        ulong idx = encoder::hash::get(key);
+        auto  n   = obj->table[idx].first();
+
         while( n!=nullptr ){
         auto itm = obj->queue.as(n->data); if( itm==nullptr ){ return; }
         if ( itm->data.first==id ){ obj->queue.erase(itm); break; }
         n = n->next; } if( n==nullptr ) { return; }
 
         obj->table[idx].erase( n );
-    
+
     }
 
-    void erase() const noexcept { 
+    void erase() const noexcept {
         for( auto x: obj->table ){ x.erase(); }
-        obj->queue.erase(); 
+        obj->queue.erase();
     }
-    
+
     /*─······································································─*/
 
     template< class... O >
     void append( const T& argc, const O&... args ) const noexcept {
-         iterator::map([&](U arg){ append(arg); }, argc, args... ); 
+         iterator::map([&](U arg){ append(arg); }, argc, args... );
     }
 
     void append( const T& pair ) const noexcept {
 
-        auto key = string::to_string(pair.first); uchar idx = 0; 
-        for( auto x:key ){ idx=(idx+x)%sizeof(uchar); }
-        auto n   = obj->table[idx].first();
-        
+        auto  key = string::to_string(pair.first);
+        ulong idx = encoder::hash::get(key);
+        auto  n   = obj->table[idx].first();
+
         while( n!=nullptr ){
         auto itm = obj->queue.as(n->data); if( itm==nullptr ){ break; }
-        if ( itm->data.first == pair.first ){ 
-             itm->data.second = pair.second; 
+        if ( itm->data.first == pair.first ){
+             itm->data.second = pair.second;
         return; } n = n->next; }
 
         obj->queue.push( pair );
