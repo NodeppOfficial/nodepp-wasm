@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -29,6 +29,8 @@ public:
 
     reflect_t () noexcept : obj( new NODE() ) {}
 
+    virtual ~reflect_t() noexcept {}
+
     /*─······································································─*/
 
     template < typename V >
@@ -39,10 +41,10 @@ public:
     /*─······································································─*/
 
     array_t<string_t> keys() const noexcept {
-        array_t<string_t> res ( obj->fields.size() );
+        queue_t<string_t> res ( obj->fields.size() );
         ulong n=0; obj->fields.map([&]( T& data ){
             res[n] = data.first; n++;
-        }); return res;
+        }); return res.data();
     }
 
     /*─······································································─*/

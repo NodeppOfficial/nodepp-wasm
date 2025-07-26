@@ -28,6 +28,7 @@ namespace nodepp { namespace conio {
     /*─······································································─*/
 
     int perr( const string_t& args ){ return fprintf( stderr, "%s", args.c_str() ); }
+    
     int pout( const string_t& args ){ return fprintf( stdout, "%s", args.c_str() ); }
 
     template< class V, class... T >
@@ -42,8 +43,7 @@ namespace nodepp { namespace conio {
         int last = sizeof...( args ), size = 0;
         string::map([&]( string_t arg ){ 
             size += pout( arg + ( --last<1 ? "" : " " ) ); 
-        },  args... ); 
-            size += pout("\033[0m"); 
+        },  args... ); size += pout("\033[0m"); 
         return size;
     }
 
@@ -52,8 +52,7 @@ namespace nodepp { namespace conio {
         int last = sizeof...( args ), size = 0;
         string::map([&]( string_t arg ){ 
             size += perr( arg + ( --last<1 ? "" : " " ) ); 
-        },  args... ); 
-            size += perr("\033[0m"); 
+        },  args... ); size += perr("\033[0m"); 
         return size;
     }
 
@@ -67,7 +66,7 @@ namespace nodepp { namespace conio {
     int undescore(){ return pout("\033[4m"); }
     int inverse(){ return pout("\033[7m"); }
     int reset(){ return pout("\033[0m"); }
-    int clear(){ return pout("\033c"); }
+    int clear(){ return pout("\033c\n"); }
 
     /*─······································································─*/
 
@@ -101,9 +100,9 @@ namespace nodepp { namespace conio {
 
     /*─······································································─*/
 
-    int error( const char* msg ){ foreground( C_RED    | C_BOLD ); return log( msg ); }
-    int  info( const char* msg ){ foreground( C_CYAN   | C_BOLD ); return log( msg ); }
-    int  done( const char* msg ){ foreground( C_GREEN  | C_BOLD ); return log( msg ); }
-    int  warn( const char* msg ){ foreground( C_YELLOW | C_BOLD ); return log( msg ); }
+    int error( string_t msg ){ foreground( C_RED    | C_BOLD ); return log( msg ); }
+    int  info( string_t msg ){ foreground( C_CYAN   | C_BOLD ); return log( msg ); }
+    int  done( string_t msg ){ foreground( C_GREEN  | C_BOLD ); return log( msg ); }
+    int  warn( string_t msg ){ foreground( C_YELLOW | C_BOLD ); return log( msg ); }
 
 }}

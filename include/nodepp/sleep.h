@@ -14,11 +14,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "wasm/sleep.cpp"
-#else
-    #error "This OS Does not support sleep.h"
-#endif
+#include "wasm/sleep.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

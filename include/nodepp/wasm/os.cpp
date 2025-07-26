@@ -10,19 +10,22 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #pragma once
-
 #include <emscripten/emscripten.h>
 #include <cerrno>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace os {
-    
-    void exit( int err=0 ){ ::exit(err); }
+
+    void exec( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+
+    void call( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
 
     /*─······································································─*/
-
+    
     string_t tmp(){ return "/tmp"; }
+
+    string_t cwd(){ return "/"; }
 
     /*─······································································─*/
 

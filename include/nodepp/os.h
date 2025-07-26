@@ -14,11 +14,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "wasm/os.cpp"
-#else
-    #error "This OS Does not support os.h"
-#endif
+#include "wasm/os.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

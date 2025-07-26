@@ -14,13 +14,9 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "path.h"
-    #include "stream.h"
-    #include "wasm/fs.cpp"
-#else
-    #error "This OS Does not support fs.h"
-#endif
+#include "path.h"
+#include "stream.h"
+#include "wasm/fs.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

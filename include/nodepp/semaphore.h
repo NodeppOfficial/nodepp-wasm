@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -24,16 +24,16 @@ public:
     semaphore_t() : obj( new NODE() ){}
 
     virtual ~semaphore_t() noexcept {
-        if( obj->addr == (void*)this )
+         if( obj->addr == (void*)this )
           { release(); }
     };
     
     /*─······································································─*/
 
-    void wait( uchar count ) const noexcept { goto check;
-
-        loop: worker::yield();
+    void wait( uchar count ) const noexcept { 
         
+        goto check; loop: worker::yield();
+
         check:
             obj->mutex.lock(); 
             if( obj->ctx >= obj.count() ) obj->ctx = 0;
@@ -55,7 +55,7 @@ public:
             obj->mutex.lock(); 
             if((obj->ctx%2) != 0 )
               { obj->mutex.unlock(); goto loop; }
-            obj->ctx++; obj->addr=(void*)this;
+          ++obj->ctx; obj->addr=(void*)this;
             obj->mutex.unlock();
 
     }
@@ -63,7 +63,7 @@ public:
     void release() const noexcept {
         obj->mutex.lock();
         obj->addr=nullptr; 
-        obj->ctx++; 
+      ++obj->ctx; 
         obj->mutex.unlock();
     }
 

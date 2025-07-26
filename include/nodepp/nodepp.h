@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -15,45 +15,77 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #include "import.h"
-#include "query.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace process {
+namespace nodepp { namespace process { loop_t loop;
 
-    array_t<string_t> args;
-    
     /*─······································································─*/
 
-    void start(){ process::signal::start(); }
+    ulong size(){ return _TASK_ + loop.size(); }
 
-    void start( int argc, char** args ){
-        int i=0; do {
-            if(!regex::test(args[i],"^\\?") ) {
-                process::args.push(args[i]);
-            } else { continue; }
-        }   while( i ++< argc - 1 ); process::start();
+    void clear(){ _TASK_=0; loop.clear(); }
+
+    bool empty(){ return size() <= 0; }
+
+    /*─······································································─*/
+
+    void exit( int err=0 ){ _EXIT_=true; clear(); ::exit(err); }
+
+    bool should_close(){ return _EXIT_ || empty(); }
+
+    /*─······································································─*/
+
+    int next(){ static ulong count = 0;
+        if(( ++count % 64 )==0){ yield(); }
+    coStart
+        coWait( loop.next()>=0 );
+    coStop }
+
+    void clear( void* address ){
+         if( address == nullptr ){ return; }
+         memset( address, 0, sizeof(bool) );
     }
 
     /*─······································································─*/
 
     template< class... T >
-    int  spawn( const T&... args ){ return ::system(args...); }
+    void* add( const T&... args ){ return loop.add( args... ); }
+
+    template< class T, class... V >
+    void await( T cb, const V&... args ){ ++_TASK_;
+    while( !should_close() && ([&](){
+
+        switch( cb( args... ) ){
+            case  1: next(); return 1; break;
+            case  0: /*---*/ return 0; break;
+            default: /*-------------*/ break;
+        }
+
+    return -1; })()>=0 ){} --_TASK_; }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace process { array_t<string_t> args;
 
     template< class... T >
-    void error( const T&... msg ){ _ERROR( msg... ); }
-
-    void exit( int err=0 ){ ::exit(err); }
-
-    void abort(){ ::abort(); }
+    void error( const T&... msg ){ throw except_t( msg... ); }
 
     /*─······································································─*/
 
-    void stop(){
-        while( !process::empty() ){
-                process::next();
-                onSIGNEXT.emit();
-        }
+    void start(){
+        onSIGEXIT.once([=](){ process::exit(1); }); 
+        process::yield(); signal::start(); 
+    }
+
+    /*─······································································─*/
+
+    void stop(){ 
+        while(!process::should_close() )
+             { process::next(); }
+        process::exit(1);
     }
 
 }}

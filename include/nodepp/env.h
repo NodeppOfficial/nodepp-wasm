@@ -9,16 +9,14 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_POLL
-#define NODEPP_POLL
-
-#if _KERNEL == NODEPP_KERNEL_WASM
-    #include "event.h"
-    #include "wasm/poll.h"
-#else
-    #error "This poll Does not support dns.h"
-#endif
-
-#endif
+#ifndef NODEPP_ENV
+#define NODEPP_ENV
 
 /*────────────────────────────────────────────────────────────────────────────*/
+
+#include "file.h"
+#include "wasm/env.cpp"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif

@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -31,6 +31,8 @@ public:
         obj->has = false; obj->err = err; 
     }
 
+    virtual ~expected_t() noexcept {}
+
     /*─······································································─*/
 
     bool has_value() const noexcept { 
@@ -41,13 +43,13 @@ public:
     /*─······································································─*/
 
     T& value() const { if ( !has_value() ) {
-        process::error("expected does not have a value");
+        throw except_t("expected does not have a value");
     }   return obj->data;  }
 
     /*─······································································─*/
 
     E& error() const { if ( has_value() ) {
-        process::error("expected does not have a value");
+        throw except_t("expected does not have a value");
     }   return obj->err;  }
 
 };}

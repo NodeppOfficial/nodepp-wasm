@@ -14,14 +14,9 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "os.h"
-    #include "event.h"
-    #include "generator.h"
-    #include "wasm/file.cpp"
-#else
-    #error "This OS Does not support file.h"
-#endif
+#include "event.h"
+#include "generator.h"
+#include "wasm/file.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

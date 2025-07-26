@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -14,18 +14,18 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { class except_t { 
-protected: 
+namespace nodepp { class except_t {
+protected:
 
-    struct NODE { 
+    struct NODE {
         void *ev = nullptr;
         string_t msg;
     };  ptr_t<NODE> obj;
 
 public:
 
-    virtual ~except_t() noexcept { 
-        if( obj == nullptr ){ return; }
+    virtual ~except_t() noexcept {
+        if( obj->ev == nullptr ){ return; }
    	    process::onSIGERR.off( obj->ev );
     }
 
@@ -35,8 +35,7 @@ public:
 
     template< class T, class = typename type::enable_if<type::is_class<T>::value,T>::type >
     except_t( const T& except_type ) noexcept : obj(new NODE()) {
-        obj->msg = except_type.what();
-        auto inp = type::bind( this ); 
+        obj->msg = except_type.what(); auto inp = type::bind( this );
         obj->ev  = process::onSIGERR.once([=]( ... ){ inp->print(); });
     }
 
@@ -44,26 +43,25 @@ public:
 
     template< class... T >
     except_t( const T&... msg ) noexcept : obj(new NODE()) {
-        obj->msg = string::join( " ", msg... );
-        auto inp = type::bind( this ); 
+        obj->msg = string::join( " ", msg... ); auto inp = type::bind( this );
         obj->ev  = process::onSIGERR.once([=]( ... ){ inp->print(); });
     }
 
     /*─······································································─*/
 
     except_t( const string_t& msg ) noexcept : obj(new NODE()) {
-        obj->msg = msg;
-        auto inp = type::bind( this ); 
+        obj->msg = msg; auto inp = type::bind( this );
         obj->ev  = process::onSIGERR.once([=]( ... ){ inp->print(); });
     }
 
     /*─······································································─*/
 
+    void       print() const noexcept { console::error(obj->msg); }
+    bool       empty() const noexcept { return obj->msg.empty(); }
     const char* what() const noexcept { return obj->msg.c_str(); }
-
-    operator char*() const noexcept { return (char*)what(); }
-    
-    void print() const noexcept { console::error(obj->msg); } 
+    operator   char*() const noexcept { return (char*)what(); }
+    string_t    data() const noexcept { return obj->msg; }
+    string_t   value() const noexcept { return obj->msg; }
 
 };}
 

@@ -14,11 +14,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "wasm/conio.cpp"
-#else
-    #error "This OS Does not support conio.h"
-#endif
+#include "wasm/conio.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

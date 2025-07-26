@@ -10,17 +10,19 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #pragma once
+#include <unistd.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace dns { 
+
+    string_t ipv6 = "([0-9a-fA-F]+\\:)+[0-9a-fA-F]+";
     
     string_t ipv4 = "([0-9]+\\.)+[0-9]+";
-    string_t ipv6 = "([0-9a-fA-F]+\\:)+[0-9a-fA-F]+";
     
     /*─······································································─*/
 
-    string_t lookup_ipv6( string_t host ) { _socket_::start_device();
+    string_t lookup_ipv6( string_t host ) {
 
           if( host == "broadcast" || host == "::2" ){ return "::2"; } 
         elif( host == "localhost" || host == "::1" ){ return "::1"; } 
@@ -52,7 +54,7 @@ namespace nodepp { namespace dns {
     
     /*─······································································─*/
 
-    string_t lookup_ipv4( string_t host ) { _socket_::start_device();
+    string_t lookup_ipv4( string_t host ) {
 
           if( host == "255.255.255.255" || host == "broadcast" ){ return "255.255.255.255"; } 
         elif( host == "127.0.0.1"       || host == "localhost" ){ return "127.0.0.1"; } 
@@ -85,6 +87,19 @@ namespace nodepp { namespace dns {
     /*─······································································─*/
 
     string_t lookup( string_t host ) { return lookup_ipv4( host ); }
+    
+    /*─······································································─*/
+
+    string_t get_hostname(){
+        auto socket = socket_t();
+            
+        socket.SOCK    = SOCK_DGRAM;
+        socket.IPPROTO = IPPROTO_UDP;
+        socket.socket ( "loopback", 0 );
+        socket.connect();
+
+        return socket.get_sockname();
+    }
     
     /*─······································································─*/
 

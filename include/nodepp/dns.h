@@ -14,13 +14,9 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if _KERNEL == NODEPP_KERNEL_WASM
-    #include "url.h"
-    #include "socket.h"
-    #include "wasm/dns.cpp"
-#else
-    #error "This OS Does not support dns.h"
-#endif
+#include "url.h"
+#include "socket.h"
+#include "wasm/dns.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

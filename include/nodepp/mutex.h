@@ -14,11 +14,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "wasm/mutex.cpp"
-#else
-    #error "This OS Does not support mutex.h"
-#endif
+#include "wasm/mutex.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

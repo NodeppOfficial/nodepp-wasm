@@ -15,18 +15,14 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace process {
+
+    ulong get_new_timeval(){ return emscripten_get_now(); }
     
-    ulong millis(){
-        return emscripten_get_now();
-    }
+    ulong  micros(){ return get_new_timeval() / 1000; }
 
-    ulong micros(){ 
-        return emscripten_get_now() / 1000;
-    }
+    ulong seconds(){ return get_new_timeval() * 1000; }
 
-    ulong seconds(){
-        return emscripten_get_now() * 1000;
-    }
+    ulong  millis(){ return get_new_timeval(); }
 
 }}
 
@@ -34,11 +30,11 @@ namespace nodepp { namespace process {
 
 namespace nodepp { namespace process {
 
-    void  delay( ulong time ){ emscripten_sleep( time ); }
+    void delay( ulong time ){ emscripten_sleep( time ); }
+
+    void yield(){ emscripten_sleep(TIMEOUT); }
 
     ulong now(){ return millis(); }
-
-    void yield(){ delay(0); }
 
 }}
 

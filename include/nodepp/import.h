@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -22,7 +22,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "coroutine.h"
+#include "macros.h"
 #include "type.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -33,6 +33,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include "coroutine.h"
 #include "string.h"
 #include "array.h"
 
@@ -41,12 +42,17 @@
 #include "iterator.h"
 #include "console.h"
 #include "sleep.h"
-#include "task.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include "loop.h"
 #include "signal.h"
 #include "except.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#include "query.h"
+#include "os.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
