@@ -31,7 +31,7 @@ protected:
 
     void set_time( ulong time, bool utc ) const noexcept {
 
-        obj->second =  = EM_ASM_INT({ let date = new Date($1);
+        obj->second = EM_ASM_INT({ let date = new Date($1);
             if( $0 ){ return date.getUTCSeconds(); }
             else    { return date.getSeconds(); } 
         }, utc, time );
@@ -67,7 +67,7 @@ protected:
 
     void get_time( bool utc ) const noexcept {
 
-        obj->second =  = EM_ASM_INT({ let date = new Date();
+        obj->second = EM_ASM_INT({ let date = new Date();
             if( $0 ){ return date.getUTCSeconds(); }
             else    { return date.getSeconds(); } 
         }, utc );
@@ -108,7 +108,7 @@ public:
 
     date_t() noexcept : obj( new NODE() ) { set_date( false ); }
     
-    virtual ~date_t() const noexcept {}
+    virtual ~date_t() noexcept {}
 
     /*─······································································─*/
 
