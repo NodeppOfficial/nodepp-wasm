@@ -203,7 +203,9 @@ public:
                 data.setSeconds($6);
             }
             stringToUTF8( data, $7, $8 ); return date.length;
-        }, obj->utc, obj->day, obj->year, obj->hour, obj->month, obj->minute, obj->second, res, UNBFF_SIZE ); return { res, size };
+        }, obj->utc, obj->day, obj->year, obj->hour, obj->month, obj->minute, obj->second, res, UNBFF_SIZE ); 
+        
+        return string_t( res, size );
     }
     
     uint get_year() const noexcept { 
