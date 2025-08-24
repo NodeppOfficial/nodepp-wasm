@@ -50,15 +50,13 @@ emrun ./www/index.html
 ## Tests
 
 ```bash
-em++ -o www/index.html ./test/main.cpp    \
-     -I ./include -pthread -lwebsocket.js --bind \
-     -s NO_DISABLE_EXCEPTION_CATCHING \
-     -s WEBSOCKET_SUBPROTOCOL=1       \
-     -s PTHREAD_POOL_SIZE=8           \
-     -s WEBSOCKET_URL=1               \
-     -s USE_PTHREADS=1                \
-     -s ASYNCIFY=1                    \
-     -s FETCH=1                       \
+em++ -o www/index.html ./test/main.cpp \
+     -I ./include -pthread --bind      \
+     -s NO_DISABLE_EXCEPTION_CATCHING  \
+     -s PTHREAD_POOL_SIZE=8            \
+     -s USE_PTHREADS=1                 \
+     -s ASYNCIFY=1                     \
+     -s FETCH=1                        \
      -s WASM=1
 
 emrun ./www/index.html
@@ -137,7 +135,6 @@ Check out some articles on [Medium](https://medium.com/@EDBCBlog)
 ## Compatibility
 - 🔗: [NodePP for Window | Linux | Mac | Bsd ](https://github.com/NodeppOfficial/nodepp)
 - 🔗: [NodePP for Arduino](https://github.com/NodeppOfficial/nodepp-arduino)
-- 🔗: [Nodepp for ESP32](https://github.com/NodeppOfficial/nodepp-ESPXX)
 - 🔗: [Nodepp for WASM](https://github.com/NodeppOfficial/nodepp-wasm)
   
 ## Contribution
