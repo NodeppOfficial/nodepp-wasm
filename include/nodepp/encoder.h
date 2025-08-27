@@ -11,8 +11,8 @@
 
 #ifndef NODEPP_ENCODER
 #define NODEPP_ENCODER
-#define BASE8  "0123456789abcdef"
-#define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+#define NODEPP_BASE8  "0123456789abcdef"
+#define NODEPP_BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -303,6 +303,6 @@ namespace nodepp { namespace encoder { namespace utf32 {
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#undef BASE64
-#undef BASE8
+#undef NODEPP_BASE64
+#undef NODEPP_BASE8
 #endif
