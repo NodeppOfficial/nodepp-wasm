@@ -71,16 +71,22 @@ public: ws_t() noexcept : obj( new NODE() ){}
             close(); return;
         }
 
-        ptr_t<EmscriptenWebSocketCreateAttributes> attr ;
-        attr = new EmscriptenWebSocketCreateAttributes();
-        attr->url                = url.c_str();
-        attr->protocols          = nullptr;
-        attr->createOnMainThread = EM_TRUE;
+        function_t<void> clb = [=](){
+            ptr_t<EmscriptenWebSocketCreateAttributes> attr ;
+            attr = new EmscriptenWebSocketCreateAttributes();
 
-        obj->fd = emscripten_websocket_new( &attr ); user.push( &self );
+            attr->url                = url.c_str();
+            attr->protocols          = nullptr;
+            attr->createOnMainThread = EM_TRUE;
+
+            self->obj->fd = emscripten_websocket_new( &attr ); user.push( &self );
+            emscripten_websocket_set_onopen_callback   ( self->obj->fd, &user, WS_EVENT_OPEN    );
+            emscripten_websocket_set_onclose_callback  ( self->obj->fd, &user, WS_EVENT_CLOSE   );
+            emscripten_websocket_set_onmessage_callback( self->obj->fd, &user, WS_EVENT_MESSAGE );
+        };
 
         process::add( coroutine::add( COROUTINE(){
-        coBegin
+        coBegin ; clb();
 
             while( self->obj->wait == 0 ){
                 emscripten_websocket_get_ready_state( self->obj->fd, &self->obj->wait );
@@ -94,10 +100,6 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
         coFinish
         }));
-
-        emscripten_websocket_set_onopen_callback   ( obj->fd, (void*)&user, WS_EVENT_OPEN    );
-        emscripten_websocket_set_onclose_callback  ( obj->fd, (void*)&user, WS_EVENT_CLOSE   );
-        emscripten_websocket_set_onmessage_callback( obj->fd, (void*)&user, WS_EVENT_MESSAGE );
 
     }
 
