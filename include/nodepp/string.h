@@ -156,7 +156,7 @@ public:
     string_t operator+=( const string_t& oth ) noexcept {
         if( oth.empty() ){ return *this; } auto slf=copy();
         buffer = string::buffer( slf.size() + oth.size() );
-        memcpy( begin()+slf.size () ,oth.begin(), oth.size() ); 
+        memcpy( begin()+slf.size () ,oth.begin(), oth.size() );
         memcpy( begin(),slf.begin() ,slf.size () ); return *this;
     }
 
@@ -228,12 +228,12 @@ public:
         int pos = min( offset, size() ); auto addr = begin() + pos;
         ptr_t<int> idx ({ pos, pos }); ulong x=0;
 
-        while( addr != end() ){ ++pos; 
+        while( addr != end() ){ ++pos;
            if( data.size() == x ){ break; }
          elif( *addr == data[x] ){ idx[1]=pos; ++x; }
          else{ idx[0]=pos; idx[1]=pos; x=0; }
         ++addr; }
-        
+
         return idx[0]!=idx[1] ? idx : nullptr;
     }
 
@@ -263,7 +263,7 @@ public:
     }
 
     string_t remove( function_t<bool,char> func ) noexcept {
-        ulong n=size(); while( n-->0 ){ 
+        ulong n=size(); while( n-->0 ){
             if( func((*this)[n]) ){ erase(n); }
         } return (*this);
     }
@@ -392,10 +392,10 @@ public:
 
         auto r = get_slice_range( start, size() );
         if( !r.has_value() ){ return nullptr; }
-        
+
         auto z = *r.get(); /*------------------------------*/
         auto n_buffer = string_t( buffer.data()+z[0], z[2] );
-        
+
         return n_buffer;
 
     }
@@ -449,25 +449,25 @@ public:
         DONE:; ++x; ++y; } return out;
     }
 
-    string_t to_slugify() const noexcept { if( empty() ){ return nullptr; } 
+    string_t to_slugify() const noexcept { if( empty() ){ return nullptr; }
         auto out=string::buffer( size() ); ulong z=1; /*------*/
-        auto y=out.begin(); auto x=begin(); while( x != end() ){ 
+        auto y=out.begin(); auto x=begin(); while( x != end() ){
               if (!string::is_alnum(*x) ){ goto DONE; }
             else { *y = string::to_lower(*x); ++z; }
         DONE:; ++x; ++y; } return string_t( &out,z );
     }
 
-    string_t to_lower_case() const noexcept { if( empty() ){ return nullptr; } 
+    string_t to_lower_case() const noexcept { if( empty() ){ return nullptr; }
         auto out=string::buffer( size() ); /*-----------------*/
-        auto y=out.begin(); auto x=begin(); while( x != end() ){ 
-            *y=string::to_lower(*x); 
+        auto y=out.begin(); auto x=begin(); while( x != end() ){
+            *y=string::to_lower(*x);
         ++x; ++y; } return out;
     }
 
-    string_t to_upper_case() const noexcept { if ( empty() ){ return nullptr; } 
+    string_t to_upper_case() const noexcept { if ( empty() ){ return nullptr; }
         auto out=string::buffer( size() ); /*-----------------*/
-        auto y=out.begin(); auto x=begin(); while( x != end() ){ 
-            *y=string::to_upper(*x); 
+        auto y=out.begin(); auto x=begin(); while( x != end() ){
+            *y=string::to_upper(*x);
         ++x; ++y; } return out;
     }
 
@@ -475,7 +475,7 @@ public:
 
     explicit operator char* (void) const noexcept { return empty() ? nullptr : &buffer; }
     explicit operator bool  (void) const noexcept { return empty(); }
-    
+
           char*  data() const noexcept { return empty() ? nullptr : &buffer; }
           char*   get() const noexcept { return empty() ? nullptr : &buffer; }
     const char* c_str() const noexcept { return empty() ? nullptr : &buffer; }

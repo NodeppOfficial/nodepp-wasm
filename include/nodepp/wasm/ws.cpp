@@ -20,9 +20,9 @@ namespace nodepp { class ws_t {
 protected:
 
     struct NODE {
-        ushort wait =0;
+        ushort wait= 0;
         int     fd =-1;
-        int  state = 0;
+        char state = 0;
     };  ptr_t<NODE> obj;
 
 private:
@@ -121,7 +121,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     bool is_closed()    const noexcept { return obj->state<0; }
     bool is_available() const noexcept { return !is_closed(); }
-    int get_fd()        const noexcept { return obj->fd; }
+    int  get_fd()       const noexcept { return obj->fd; }
 
     /*─······································································─*/
 

@@ -83,7 +83,7 @@ namespace nodepp { namespace generator { namespace file {
         if( pos < r[0] ){ str->del_borrow(); str->pos(r[0]); }
       elif( pos >=r[1] ){ coEnd; } } else { d = str->get_buffer_size(); }
 
-        if( data.empty() ){ 
+        if( data.empty() ){
             coWait((state=str->_read(str->get_buffer_data(),min(d,size)))==-2);
         if( state<=0 ){ coEnd; }
         if( state >0 ){ data=string_t(str->get_buffer_data(),(ulong)state); }}
@@ -485,7 +485,7 @@ namespace nodepp { namespace generator { namespace ws {
             string_t enc = encoder::base64::get( encoder::buffer::hex2buff(sha.get()) );
 
             if( dta != enc ){
-                cli.onError.emit("secret key does not match"); 
+                cli.onError.emit("secret key does not match");
                 cli.close(); break;
             }   cli.stop (); return true;
 

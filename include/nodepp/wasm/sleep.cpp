@@ -16,11 +16,19 @@
 
 namespace nodepp { namespace process {
 
-    ulong get_new_timeval(){ return emscripten_get_now(); }
-    
-    ulong  micros(){ return get_new_timeval() / 1000; }
+    inline ulong get_new_timeval() { char res [32];
 
-    ulong seconds(){ return get_new_timeval() * 1000; }
+        auto size = EM_ASM_INT({
+            let data = Date.now() + ""; /*-----------------*/
+            stringToUTF8( data, $0, $1 ); return data.length;
+        }, res, 32 );
+
+        return string::to_ullong( string_t( res, size ) );
+    }
+
+    ulong  micros(){ return get_new_timeval() / 1000000; }
+
+    ulong seconds(){ return get_new_timeval() / 1000; }
 
     ulong  millis(){ return get_new_timeval(); }
 
