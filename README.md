@@ -72,8 +72,6 @@ using namespace nodepp;
 void onMain() {
     console::log("Hello World!");
 }
-
-// note that we are using onMain() instead of main()
 ```
 
 ### HTTP Client
@@ -90,13 +88,13 @@ void onMain() {
 
     fetch::add( args )
 
-    .then([=]( fetch_t res ){
-        console::log( "->", res.status );
-        console::log( res.headers["Content-Length"] );
-    })
-
     .fail([=]( except_t rej ){
         console::log( rej );
+    })
+
+    .then([=]( fetch_t res ){
+        console::log( "->", res.body );
+        console::log( "->", res.status );
     });
 
 }
@@ -130,13 +128,52 @@ void onMain() {
 
 ### More Examples [here](https://github.com/NodeppOfficial/Nodepp/tree/main/examples)
 
-Check out some articles on [Medium](https://medium.com/@EDBCBlog)
+## Installing Nodepp-Wasm
 
-## Compatibility
+### Clone The Repository
+```bash
+#!/usr/bin/env bash
+git clone https://github.com/NodeppOfficial/nodepp-wasm ; cd nodepp
+```
+
+### Create a main.cpp File
+```bash
+#!/usr/bin/env bash
+touch main.cpp ; mkdir ./www
+```
+```cpp
+#include <nodepp/nodepp.h>
+
+using namespace nodepp;
+
+void onMain() { 
+    console::log("Hello World!");
+}
+```
+
+### Build Your Code
+```bash
+#!/usr/bin/env bash
+em++ -o www/index.html main.cpp           \
+     -I ./include -pthread -lwebsocket.js \
+    --shell-file ./shell.html --bind      \
+     -s NO_DISABLE_EXCEPTION_CATCHING     \
+     -s WEBSOCKET_SUBPROTOCOL=1 \
+     -s PTHREAD_POOL_SIZE=8     \
+     -s WEBSOCKET_URL=1         \
+     -s USE_PTHREADS=1          \
+     -s ASYNCIFY=1              \
+     -s FETCH=1                 \
+     -s WASM=1
+
+emrun ./www/index.html
+```
+
+## Nodepp Supports Other Platforms Too
 - 🔗: [NodePP for Window | Linux | Mac | Bsd ](https://github.com/NodeppOfficial/nodepp)
 - 🔗: [NodePP for Arduino](https://github.com/NodeppOfficial/nodepp-arduino)
 - 🔗: [Nodepp for WASM](https://github.com/NodeppOfficial/nodepp-wasm)
-  
+
 ## Contribution
 
 If you want to contribute to **Nodepp**, you are welcome to do so! You can contribute in several ways:
