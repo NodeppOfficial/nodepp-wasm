@@ -266,7 +266,7 @@ namespace path { namespace {
 
     string_t unshift( const string_t& path, const string_t& dir ){
         auto sec = reg0.split( path::normalize(path) );
-             sec.unshift( dir ); /*------------------*/ 
+             sec.unshift( dir ); /*------------------*/
              return path::normalize( sec.join( sep ) );
     }
 
@@ -286,6 +286,11 @@ namespace path { namespace {
 
     array_t<string_t> split( const string_t& path ){
         return reg0.split( path::normalize(path) );
+    }
+
+    template< class T, ulong N >
+    string_t join( string_t (& value)[N] ){
+      return array_t<string_t>( N, value ).join("/");
     }
 
     template< class T, class... V >

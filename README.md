@@ -126,7 +126,7 @@ void onMain() {
 }
 ```
 
-### More Examples [here](https://github.com/NodeppOfficial/Nodepp/tree/main/examples)
+### More Examples [here](https://nodeppofficial.github.io/nodepp-doc/guide.html)
 
 ## Installing Nodepp-Wasm
 
@@ -146,7 +146,7 @@ touch main.cpp ; mkdir ./www
 
 using namespace nodepp;
 
-void onMain() { 
+void onMain() {
     console::log("Hello World!");
 }
 ```
