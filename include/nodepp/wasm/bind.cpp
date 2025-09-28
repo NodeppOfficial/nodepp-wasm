@@ -10,12 +10,15 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #pragma once
+
 #include <emscripten/emscripten.h>
 #include <emscripten/bind.h>
 
+#define EM_STRING std::string
+
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, &CALLBACK );
+#define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, CALLBACK );
 #define BIND_BEGIN( MODULE ) EMSCRIPTEN_BINDINGS( MODULE ){
 #define BIND_RUN(...) emscripten_run_script( #__VA_ARGS__ )
 #define BIND_END() }
@@ -23,7 +26,7 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #define BIND( MODULE, NAME, CALLBACK ) EMSCRIPTEN_BINDINGS( MODULE ) { \
-    emscripten::function( NAME, CALLBACK );                            \
+        BIND_ADD( NAME, CALLBACK ) /*-------------------------------*/ \
 }
 
 /*────────────────────────────────────────────────────────────────────────────*/

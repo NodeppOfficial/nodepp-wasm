@@ -41,10 +41,8 @@ namespace nodepp { namespace process { loop_t _loop_;
 
     /*─······································································─*/
 
-    int next(){ static ulong count = 0;
-        if(( ++count % 64 ) == 0 ){ yield(); }
-    coStart
-        coWait( _loop_.next() >= 0 );
+    int next(){ coStart
+        if( !_loop_.empty() ) { _loop_.next(); coNext; } yield();
     coStop }
 
     /*─······································································─*/
@@ -60,7 +58,7 @@ namespace nodepp { namespace process { loop_t _loop_;
     template< class T, class... V >
     void await( T cb, const V&... args ){ ++_TASK_;
          while( cb( args... )>=0 && !should_close() )
-              { process::next(); } 
+              { process::next(); }
     --_TASK_; }
 
 }}
@@ -75,13 +73,13 @@ namespace nodepp { namespace process { array_t<string_t> args;
     /*─······································································─*/
 
     void start(){
-        onSIGEXIT.once([=](){ process::exit(1); }); 
-        process::yield(); signal::start(); 
+        onSIGEXIT.once([=](){ process::exit(1); });
+        process::yield(); signal::start();
     }
 
     /*─······································································─*/
 
-    void stop(){ 
+    void stop(){
         while(!process::should_close() )
              { process::next(); }
         process::exit(1);
