@@ -50,6 +50,11 @@ namespace nodepp { namespace conio {
         perr( data ); return data.size();
     }
 
+    template< class... T >
+    string_t join( const T&... args ){ 
+        return string::join( " ", args... ); 
+    }
+
     /*─······································································─*/
     
     int set_position( int x, int y ){ return pout(string::format("\033[%d;%dH",x,y)); }
