@@ -14,6 +14,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include <emscripten/console.h>
 #include "conio.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -21,16 +22,16 @@
 namespace nodepp { namespace console {
 
     template< class... T >
-    int err( const T&... args ){ return conio::err(args...,"\n"); }
+    void err( const T&... args ){ emscripten_console_error( conio::join( args... ).get() ); }
 
     template< class... T >
-    int log( const T&... args ){ return conio::log(args...,"\n"); }
+    void log( const T&... args ){ emscripten_console_log( conio::join( args... ).get() ); }
+
+    template< class... T >
+    void pout( const T&... args ){ emscripten_console_log( conio::join( args... ).get() ); }
 
     template< class... T >
     int scan( const T&... args ){ return conio::scan( args... ); }
-
-    template< class... T >
-    int pout( const T&... args ){ return conio::log( args... ); }
 
     void wait(){ char x; conio::scan("%c",&x); }
 
@@ -39,33 +40,28 @@ namespace nodepp { namespace console {
     /*─······································································─*/
 
     template< class... T >
-    int warning( const T&... args ){ 
-        conio::warn("WARNING: ");
-        return log( args... ); 
+    void error( const T&... args ){ 
+        emscripten_console_error( conio::join( args... ).get() );
     }
 
     template< class... T >
-    int success( const T&... args ){ 
-        conio::done("SUCCESS: ");
-        return log( args... );  
+    void warning( const T&... args ){ 
+        emscripten_console_warn( conio::join( args... ).get() );
     }
 
     template< class... T >
-    int error( const T&... args ){ 
-        conio::error("ERROR: "); 
-        return log( args... ); 
+    void success( const T&... args ){ 
+        emscripten_console_log( conio::join( args... ).get() );
     }
 
     template< class... T >
-    int done( const T&... args ){ 
-        conio::done("DONE: "); 
-        return log( args... ); 
+    void done( const T&... args ){ 
+        emscripten_console_log( conio::join( args... ).get() );
     }
 
     template< class... T >
-    int info( const T&... args ){ 
-        conio::info("INFO: "); 
-        return log( args... ); 
+    void info( const T&... args ){ 
+        emscripten_console_dbg( conio::join( args... ).get() );
     }
 
 }}
