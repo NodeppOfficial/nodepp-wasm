@@ -9,8 +9,8 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_FS
-#define NODEPP_FS
+#ifndef NODEPP_FETCH
+#define NODEPP_FETCH
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -18,7 +18,7 @@
 #include "url.h"
 #include "path.h"
 #include "promise.h"
-#include "wasm/fetch.cpp"
+#include "wasm/fetch.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

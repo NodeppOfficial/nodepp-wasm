@@ -9,7 +9,11 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_OS
+#define NODEPP_WASM_OS
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include <emscripten/emscripten.h>
 #include <cerrno>
 
@@ -17,20 +21,24 @@
 
 namespace nodepp { namespace os {
 
-    void exec( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+    inline void exec( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
 
-    void call( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+    inline void call( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
 
     /*─······································································─*/
     
-    string_t tmp(){ return "/tmp"; }
+    inline string_t tmp(){ return "/tmp"; }
 
-    string_t cwd(){ return "/"; }
+    inline string_t cwd(){ return "/"; }
 
     /*─······································································─*/
 
-    uint error(){ return errno; }
+    inline uint error(){ return errno; }
 
 }}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/

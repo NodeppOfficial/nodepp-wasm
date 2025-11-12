@@ -9,25 +9,29 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_ENV
+#define NODEPP_WASM_ENV
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace process { namespace env {
 
-    int set( const string_t& name, const string_t& value ){ return setenv( name.c_str(), value.c_str(), 1 ); }
+    inline int set( const string_t& name, const string_t& value ){ return setenv( name.c_str(), value.c_str(), 1 ); }
     
-    string_t get( const string_t& name ){ return getenv( name.c_str() ); }
+    inline string_t get( const string_t& name ){ return getenv( name.c_str() ); }
 
-    int del( const string_t& name ){ return unsetenv( name.c_str() ); }
+    inline int del( const string_t& name ){ return unsetenv( name.c_str() ); }
 
-    int init( const string_t& path ){ try {
+    inline int init( const string_t& path ){ try {
 
-        auto patt = "^([^ =]+)[= \"]+([^\n#\"]+)";
+        static regex_t reg( "^([^ =]+)[= \"]+([^\n#\"]+)" );
         auto file = file_t( path, "r" );
 
         while( !file.is_closed() ){
-            auto match = regex::get_memory( file.read_line(), patt );
+            /*--------*/ reg.match_all( file.read_line() );
+            auto match = reg.get_memory  ();
+            /*--------*/ reg.clear_memory();
+
             if ( match.size() != 2 ){ continue; } 
             set( match[0], match[1] );
         }
@@ -40,14 +44,18 @@ namespace nodepp { namespace process { namespace env {
 
 namespace nodepp { namespace process {
 
-    bool  is_child(){ return !env::get("CHILD").empty(); }
+    inline bool  is_child(){ return !env::get("CHILD").empty(); }
 
-    bool is_parent(){ return env::get("CHILD").empty(); }
+    inline bool is_parent(){ return env::get("CHILD").empty(); }
 
-    string_t shell(){ return env::get("SHELL"); }
+    inline string_t shell(){ return env::get("SHELL"); }
 
-    string_t  home(){ return env::get("HOME"); }
+    inline string_t  home(){ return env::get("HOME"); }
 
 }}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/

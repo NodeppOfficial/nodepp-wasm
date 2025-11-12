@@ -9,15 +9,16 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_FETCH
+#define NODEPP_WASM_FETCH
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include <emscripten/fetch.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { using header_t = map_t< string_t, string_t >; }
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
 namespace nodepp { struct fetch_t {
 
     string_t  url;
@@ -138,7 +139,7 @@ public:
 
 namespace nodepp { namespace fetch {
 
-    promise_t<fetch_t,except_t> add ( const fetch_t& fetch ) {
+    inline promise_t<fetch_t,except_t> add ( const fetch_t& fetch ) {
     return promise_t<fetch_t,except_t>([=]( function_t<void,fetch_t> res, function_t<void,except_t> rej ){
 
         if( !url::is_valid( fetch.url ) ){ rej(except_t("invalid URL")); return; }
@@ -153,5 +154,9 @@ namespace nodepp { namespace fetch {
 
 
 }}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/

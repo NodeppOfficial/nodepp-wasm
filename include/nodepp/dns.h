@@ -16,7 +16,7 @@
 
 #include "url.h"
 #include "socket.h"
-#include "wasm/dns.cpp"
+#include "wasm/dns.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

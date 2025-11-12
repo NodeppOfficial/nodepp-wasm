@@ -9,17 +9,21 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_MUTEX
+#define NODEPP_WASM_MUTEX
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include <pthread.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace worker {
 
-    void delay( ulong time ){ process::delay(time); }
-    void yield(){ delay(TIMEOUT); sched_yield(); }
-    int    pid(){ return (int)pthread_self(); }
-    void  exit(){ pthread_exit(NULL); }
+    inline void delay( ulong time ){ process::delay(time); }
+    inline void yield(){ delay(TIMEOUT); sched_yield(); }
+    inline int    pid(){ return (int)pthread_self(); }
+    inline void  exit(){ pthread_exit(NULL); }
 
 }}
 
@@ -72,5 +76,9 @@ public:
     inline bool _lock()   const noexcept { return pthread_mutex_lock  (&obj->fd)==0; }
 
 };}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/

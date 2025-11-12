@@ -9,20 +9,32 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_SLEEP
+#define NODEPP_WASM_SLEEP
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include <emscripten/emscripten.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace process {
 
-    ulong get_new_timeval(){ return emscripten_get_now(); }
-    
-    ulong  micros(){ return get_new_timeval() / 1000; }
+    inline ulong get_new_timeval() { char res [32];
 
-    ulong seconds(){ return get_new_timeval() * 1000; }
+        auto size = EM_ASM_INT({
+            let data = Date.now() + ""; /*-----------------*/
+            stringToUTF8( data, $0, $1 ); return data.length;
+        }, res, 32 );
 
-    ulong  millis(){ return get_new_timeval(); }
+        return string::to_ullong( string_t( res, size ) );
+    }
+
+    inline ulong  micros(){ return get_new_timeval() / 1000000; }
+
+    inline ulong seconds(){ return get_new_timeval() / 1000; }
+
+    inline ulong  millis(){ return get_new_timeval(); }
 
 }}
 
@@ -30,12 +42,16 @@ namespace nodepp { namespace process {
 
 namespace nodepp { namespace process {
 
-    void delay( ulong time ){ emscripten_sleep( time ); }
+    inline void delay( ulong time ){ emscripten_sleep( time ); }
 
-    void yield(){ emscripten_sleep(TIMEOUT); }
+    inline void yield(){ emscripten_sleep(TIMEOUT); }
 
-    ulong now(){ return millis(); }
+    inline ulong now(){ return millis(); }
 
 }}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
