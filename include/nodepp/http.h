@@ -17,8 +17,9 @@
 #include "any.h"
 #include "url.h"
 #include "path.h"
+#include "stream.h"
 #include "promise.h"
-#include "wasm/fetch.h"
+#include "wasm/http.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

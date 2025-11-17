@@ -32,17 +32,10 @@ One of the standout features of Nodepp is its 100% asynchronous architecture, po
 ## Build & Run
 
 ```bash
-em++ -o www/index.html main.cpp -lembind  \
-     -I ./include -pthread -lwebsocket.js \
-    --shell-file ./shell.html --bind      \
-     -s NO_DISABLE_EXCEPTION_CATCHING     \
-     -s WEBSOCKET_SUBPROTOCOL=1 \
-     -s PTHREAD_POOL_SIZE=8     \
-     -s WEBSOCKET_URL=1         \
-     -s USE_PTHREADS=1          \
-     -s ASYNCIFY=1              \
-     -s FETCH=1                 \
-     -s WASM=1
+em++ -o www/index.html main.cpp -lembind -I ./include \
+    --shell-file ./shell.html --bind  \
+     -s NO_DISABLE_EXCEPTION_CATCHING \
+     -s ASYNCIFY=1 -s FETCH=1 -s WASM=1
 
 emrun ./www/index.html
 ```
@@ -77,24 +70,23 @@ void onMain() {
 ### HTTP Client
 ```cpp
 #include <nodepp/nodepp.h>
-#include <nodepp/fetch.h>
+#include <nodepp/http.h>
 
 using namespace nodepp;
 
 void onMain() {
 
     fetch_t args;
-            args.url = "https://localhost:8000/";
+            args.method = "GET";
+            args.url    = "http://localhost:6931/";
 
-    fetch::add( args )
+    http::fetch( args )
 
-    .fail([=]( except_t rej ){
-        console::log( rej );
-    })
+    .fail([=]( except_t err ){ console::log( err ); })
 
-    .then([=]( fetch_t res ){
-        console::log( "->", res.body );
-        console::log( "->", res.status );
+    .then([=]( http_t cli ){
+        console::log( stream::await( cli ) );
+        console::log( "->", cli.status );
     });
 
 }
@@ -132,13 +124,11 @@ void onMain() {
 
 ### Clone The Repository
 ```bash
-#!/usr/bin/env bash
 git clone https://github.com/NodeppOfficial/nodepp-wasm ; cd nodepp
 ```
 
 ### Create a main.cpp File
 ```bash
-#!/usr/bin/env bash
 touch main.cpp ; mkdir ./www
 ```
 ```cpp
@@ -153,18 +143,10 @@ void onMain() {
 
 ### Build Your Code
 ```bash
-#!/usr/bin/env bash
-em++ -o www/index.html main.cpp -lembind  \
-     -I ./include -pthread -lwebsocket.js \
-    --shell-file ./shell.html --bind      \
-     -s NO_DISABLE_EXCEPTION_CATCHING     \
-     -s WEBSOCKET_SUBPROTOCOL=1 \
-     -s PTHREAD_POOL_SIZE=8     \
-     -s WEBSOCKET_URL=1         \
-     -s USE_PTHREADS=1          \
-     -s ASYNCIFY=1              \
-     -s FETCH=1                 \
-     -s WASM=1
+em++ -o www/index.html main.cpp -lembind -I./include \
+    --shell-file ./shell.html --bind  \
+     -s NO_DISABLE_EXCEPTION_CATCHING \
+     -s ASYNCIFY=1 -s FETCH=1 -s WASM=1
 
 emrun ./www/index.html
 ```
