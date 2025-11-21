@@ -4,19 +4,24 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_DNS
-#define NODEPP_DNS
+#ifndef NODEPP_ATOMIC
+#define NODEPP_ATOMIC
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "url.h"
-#include "socket.h"
-#include "wasm/dns.h"
+#include "wasm/atomic.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp {
+    atomic_t<bool> _EXIT_( false  );
+    atomic_t<int>  _TASK_( int(0) );
+}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
