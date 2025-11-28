@@ -9,7 +9,8 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_CONIO
+#define NODEPP_WASM_CONIO
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -27,9 +28,9 @@ namespace nodepp { namespace conio {
 
     /*─······································································─*/
 
-    int perr( const string_t& args ){ return fprintf( stderr, "%s", args.c_str() ); }
+    inline int perr( const string_t& args ){ return fprintf( stderr, "%s", args.c_str() ); }
     
-    int pout( const string_t& args ){ return fprintf( stdout, "%s", args.c_str() ); }
+    inline int pout( const string_t& args ){ return fprintf( stdout, "%s", args.c_str() ); }
 
     template< class V, class... T >
     int scan( const V& argc, const T&... args ){ 
@@ -50,21 +51,26 @@ namespace nodepp { namespace conio {
         perr( data ); return data.size();
     }
 
+    template< class... T >
+    string_t join( const T&... args ){ 
+        return string::join( " ", args... ); 
+    }
+
     /*─······································································─*/
     
-    int set_position( int x, int y ){ return pout(string::format("\033[%d;%dH",x,y)); }
-    int gotoxy( int x, int y ){ return set_position( x, y ); }
+    inline int set_position( int x, int y ){ return pout(string::format("\033[%d;%dH",x,y)); }
+    inline int gotoxy( int x, int y ){ return set_position( x, y ); }
 
     /*─······································································─*/
 
-    int undescore(){ return pout("\033[4m"); }
-    int   inverse(){ return pout("\033[7m"); }
-    int     reset(){ return pout("\033[0m"); }
-    int     clear(){ return pout("\033c\n"); }
+    inline int undescore(){ return pout("\033[4m"); }
+    inline int   inverse(){ return pout("\033[7m"); }
+    inline int     reset(){ return pout("\033[0m"); }
+    inline int     clear(){ return pout("\033c\n"); }
 
     /*─······································································─*/
 
-    int background( int state ){ 
+    inline int background( int state ){ 
         if( state & 0x10 ){ pout("\033[1m"); state &= 0x0f; }
         switch( state )   {
             case color::black:   return pout("\033[40m"); break;
@@ -78,7 +84,7 @@ namespace nodepp { namespace conio {
         }   return -1;
     }
 
-    int foreground( int state ){
+    inline int foreground( int state ){
         if( state & 0x10 ){ pout("\033[1m"); state &= 0x0f; }
         switch( state )   {
             case color::black:   return pout("\033[30m"); break;
@@ -94,11 +100,15 @@ namespace nodepp { namespace conio {
 
     /*─······································································─*/
 
-    int error( string_t msg ){ foreground( color::red    | color::bold ); return log( msg ); }
-    int  info( string_t msg ){ foreground( color::cyan   | color::bold ); return log( msg ); }
-    int  done( string_t msg ){ foreground( color::green  | color::bold ); return log( msg ); }
-    int  warn( string_t msg ){ foreground( color::yellow | color::bold ); return log( msg ); }
+    inline int error( string_t msg ){ foreground( color::red    | color::bold ); return log( msg ); }
+    inline int  info( string_t msg ){ foreground( color::cyan   | color::bold ); return log( msg ); }
+    inline int  done( string_t msg ){ foreground( color::green  | color::bold ); return log( msg ); }
+    inline int  warn( string_t msg ){ foreground( color::yellow | color::bold ); return log( msg ); }
 
 }}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
