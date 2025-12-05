@@ -16,7 +16,7 @@
 
 #include "event.h"
 #include "generator.h"
-#include "wasm/file.cpp"
+#include "wasm/file.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

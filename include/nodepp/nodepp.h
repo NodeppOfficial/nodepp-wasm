@@ -22,29 +22,32 @@ namespace nodepp { namespace process { loop_t _loop_;
 
     /*─······································································─*/
 
-    ulong size(){ return _TASK_ + _loop_.size(); }
+    inline ulong size(){ return _TASK_.get() + _loop_.size(); }
 
-    void clear(){ _TASK_=0; _loop_.clear(); }
+    inline void clear(){ _TASK_.set( 0 ); _loop_.clear(); }
 
-    bool empty(){ return size() <= 0; }
+    inline bool empty(){ return size() <= 0; }
 
     /*─······································································─*/
 
-    void exit( int err=0 ){ _EXIT_=true; clear(); ::exit(err); }
+    inline bool should_close(){ return _EXIT_ || empty(); }
 
-    bool should_close(){ return _EXIT_ || empty(); }
-
-    void clear( void* address ){
+    inline void clear( void* address ){
          if( address == nullptr ){ return; }
          memset( address, 0, sizeof(bool) );
     }
 
+    inline void exit( int err=0 ){ 
+        if( should_close() ){ goto DONE; }
+        _EXIT_=true; /**/ clear(); 
+        DONE:; /*--*/ ::exit(err); 
+    }
+
     /*─······································································─*/
 
-    int next(){ static ulong count = 0;
-        if(( ++count % 64 ) == 0 ){ yield(); }
-    coStart
-        coWait( _loop_.next() >= 0 );
+    inline int next(){ static uchar count=0; if( count%64==0 ){ yield(); }
+    count++ ; coStart
+        if( !_loop_.empty() ) { _loop_.next(); coNext; }
     coStop }
 
     /*─······································································─*/
@@ -60,7 +63,7 @@ namespace nodepp { namespace process { loop_t _loop_;
     template< class T, class... V >
     void await( T cb, const V&... args ){ ++_TASK_;
          while( cb( args... )>=0 && !should_close() )
-              { process::next(); } 
+              { process::next(); }
     --_TASK_; }
 
 }}
@@ -74,17 +77,17 @@ namespace nodepp { namespace process { array_t<string_t> args;
 
     /*─······································································─*/
 
-    void start(){
-        onSIGEXIT.once([=](){ process::exit(1); }); 
-        process::yield(); signal::start(); 
+    inline void start(){
+        onSIGEXIT.once([=](){ process::exit(0); });
+        process::yield(); signal::start();
     }
 
     /*─······································································─*/
 
-    void stop(){ 
+    inline void stop(){
         while(!process::should_close() )
              { process::next(); }
-        process::exit(1);
+        process::exit(0);
     }
 
     /*─······································································─*/

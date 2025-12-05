@@ -4,21 +4,24 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_FS
-#define NODEPP_FS
+#ifndef NODEPP_ATOMIC
+#define NODEPP_ATOMIC
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "any.h"
-#include "url.h"
-#include "path.h"
-#include "promise.h"
-#include "wasm/fetch.cpp"
+#include "wasm/atomic.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp {
+    atomic_t<bool> _EXIT_( false  );
+    atomic_t<int>  _TASK_( int(0) );
+}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

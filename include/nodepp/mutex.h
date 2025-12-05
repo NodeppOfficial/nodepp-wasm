@@ -14,7 +14,18 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "wasm/mutex.cpp"
+#include "wasm/mutex.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace mutex {
+
+    template< class T, class... V >
+    function_t<int,V...> add( mutex_t mut, T cb, const V&... args ){
+        return [=](){ return mut.emit( cb, args... ); };
+    }
+
+}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

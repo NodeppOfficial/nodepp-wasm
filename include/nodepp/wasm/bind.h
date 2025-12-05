@@ -4,36 +4,34 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_WORKER
-#define NODEPP_WORKER
+#ifndef NODEPP_WASM_BIND
+#define NODEPP_WASM_BIND
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "mutex.h"
-#include "wasm/worker.h"
+#include <emscripten/emscripten.h>
+#include <emscripten/bind.h>
+#include <emscripten/val.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace worker { 
+#define EM_VAL    emscripten::val
+#define EM_STRING std::string
+#define EM_ARRAY  std::vector
 
-    template< class V, class... T >
-    void await( V cb, const T&... args ){ 
-        worker_t wrk( cb, args... ); wrk.await();
-    }
-    
-    template< class V, class... T >
-    worker_t add( V cb, const T&... args ){ 
-        worker_t wrk( cb, args... ); 
-        wrk.add(); return wrk; 
-    }
+/*────────────────────────────────────────────────────────────────────────────*/
 
-}}
+#define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, CALLBACK );
+#define BIND_RUN( ...) emscripten_run_script( #__VA_ARGS__ )
+#define BIND( MODULE ) EMSCRIPTEN_BINDINGS( MODULE )
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

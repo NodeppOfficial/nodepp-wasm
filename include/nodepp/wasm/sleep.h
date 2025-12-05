@@ -9,21 +9,49 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
+#ifndef NODEPP_WASM_SLEEP
+#define NODEPP_WASM_SLEEP
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include <emscripten/emscripten.h>
-#include <emscripten/bind.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, &CALLBACK );
-#define BIND_BEGIN( MODULE ) EMSCRIPTEN_BINDINGS( MODULE ){
-#define BIND_RUN(...) emscripten_run_script( #__VA_ARGS__ )
-#define BIND_END() }
+namespace nodepp { namespace process {
+
+    inline ulong get_new_timeval() { char res [32];
+
+        auto size = EM_ASM_INT({
+            let data = Date.now() + ""; /*-----------------*/
+            stringToUTF8( data, $0, $1 ); return data.length;
+        }, res, 32 );
+
+        return string::to_ullong( string_t( res, size ) );
+    }
+
+    inline ulong  micros(){ return get_new_timeval() / 1000000; }
+
+    inline ulong seconds(){ return get_new_timeval() / 1000; }
+
+    inline ulong  millis(){ return get_new_timeval(); }
+
+}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define BIND( MODULE, NAME, CALLBACK ) EMSCRIPTEN_BINDINGS( MODULE ) { \
-    emscripten::function( NAME, CALLBACK );                            \
-}
+namespace nodepp { namespace process {
+
+    inline void delay( ulong time ){ emscripten_sleep( time ); }
+
+    inline void yield(){ emscripten_sleep(TIMEOUT); }
+
+    inline ulong now(){ return millis(); }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
