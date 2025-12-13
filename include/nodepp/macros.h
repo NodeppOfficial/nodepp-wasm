@@ -230,8 +230,7 @@ template< class T > T clamp( const T& val, const T& _min, const T& _max ){ retur
 #endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
-
-#define typeof(DATA) string_t( typeid(DATA).name() )
+//#define typeof(DATA) string_t( typeid(DATA).name() )
 
 #define ullong  unsigned long long int
 #define ulong   unsigned long int
