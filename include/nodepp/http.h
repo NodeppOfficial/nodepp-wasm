@@ -9,33 +9,18 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#pragma once
-#include <emscripten/emscripten.h>
+#ifndef NODEPP_FETCH
+#define NODEPP_FETCH
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace process {
-
-    ulong get_new_timeval(){ return emscripten_get_now(); }
-    
-    ulong  micros(){ return get_new_timeval() / 1000; }
-
-    ulong seconds(){ return get_new_timeval() * 1000; }
-
-    ulong  millis(){ return get_new_timeval(); }
-
-}}
+#include "any.h"
+#include "url.h"
+#include "path.h"
+#include "stream.h"
+#include "promise.h"
+#include "wasm/http.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace process {
-
-    void delay( ulong time ){ emscripten_sleep( time ); }
-
-    void yield(){ emscripten_sleep(TIMEOUT); }
-
-    ulong now(){ return millis(); }
-
-}}
-
-/*────────────────────────────────────────────────────────────────────────────*/
+#endif

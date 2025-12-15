@@ -3,18 +3,19 @@ if [ ! -d "./www" ]; then
 fi
 
 FLAGS=(
-    -s WEBSOCKET_SUBPROTOCOL=1
-    -s PTHREAD_POOL_SIZE=8
+    -s MODULARIZE=1 -s EXPORT_NAME="Engine"
     -s FETCH=1 -s WASM=1
-    -s WEBSOCKET_URL=1
-    -s USE_PTHREADS=1
     -s ASYNCIFY=1
 )
 
-SHELL="--shell-file ./shell.html --bind"
-LIB="-pthread -lwebsocket.js"
+LIB="-pthread -lwebsocket.js --bind"
 INCLUDE="-I./include"
 FILE="main.cpp"
 
-em++ -o www/index.html $FILE $INCLUDE $LIB $SHELL "${FLAGS[@]}"
+em++ -o www/index.js $FILE $INCLUDE $LIB "${FLAGS[@]}"
+
+if [ ! $? -eq 0 ]; then
+    echo "exit error"; exit;
+fi
+
 emrun ./www/index.html

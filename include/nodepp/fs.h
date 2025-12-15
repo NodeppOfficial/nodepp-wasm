@@ -16,7 +16,7 @@
 
 #include "path.h"
 #include "stream.h"
-#include "wasm/fs.cpp"
+#include "wasm/fs.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

@@ -9,12 +9,18 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_LOOP
-#define NODEPP_LOOP
+#ifndef NODEPP_WASM_POLL
+#define NODEPP_WASM_POLL
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { class loop_t : public generator_t {
+namespace nodepp { enum POLL_STATE {
+    READ = 1, WRITE = 2, DUPLEX = 3
+};}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { class poll_t : public generator_t {
 private:
 
     using NODE_CLB = function_t<int>;
@@ -28,9 +34,8 @@ protected:
 
 public:
 
-    virtual ~loop_t() noexcept { /*-----*/ }
-
-    loop_t() noexcept : obj( new NODE() ) {}
+    virtual ~poll_t() noexcept {}
+    /*----*/ poll_t() noexcept : obj( new NODE() ) {}
 
     /*─······································································─*/
 
@@ -63,8 +68,8 @@ public:
 
     /*─······································································─*/
 
-    template< class T, class... V >
-    inline void* add( T cb, const V&... arg ) const noexcept {
+    template< class T, class U, class... W >
+    void* add( T, uchar, U cb, const W&... args ) noexcept {
 
         ptr_t<waiter> tsk = new waiter(); /*----------*/
         auto clb=type::bind(cb); tsk->blk=0; tsk->out=1; 
@@ -72,7 +77,7 @@ public:
         obj->queue.push([=](){
             if( tsk->out==0 ){ return -1; }
             if( tsk->blk==1 ){ return  1; } 
-                tsk->blk =1; int rs=(*clb)( arg... );
+                tsk->blk =1; int rs=(*clb)( args... );
             if( clb.null()  ){ return -1; }  
                 tsk->blk =0;   return !tsk->out?-1:rs;
         }); 
@@ -85,3 +90,5 @@ public:
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

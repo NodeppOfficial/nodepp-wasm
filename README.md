@@ -4,11 +4,30 @@ Nodepp is a groundbreaking open-source project that simplifies C++ application d
 
 One of the standout features of Nodepp is its 100% asynchronous architecture, powered by an internal Event Loop. This design efficiently manages Nodepp’s tasks, enabling you to develop scalable and concurrent applications with minimal code. Experience the power and flexibility of Nodepp as you streamline your development process and create robust applications effortlessly!
 
-## Dependencies
+🔗: [Nodepp The MOST Powerful Framework for Asynchronous Programming in C++](https://medium.com/p/c01b84eee67a)
+
+## Dependencies & Cmake Integration
 ```bash
 #emscripten
     🪟: pacman -S mingw-w64-ucrt-x86_64-emscripten
     🐧: sudo apt install emscripten
+```
+```bash
+include(FetchContent)
+
+FetchContent_Declare(
+	nodepp
+	GIT_REPOSITORY   https://github.com/NodeppOfficial/nodepp-wasm
+	GIT_TAG          origin/main
+	GIT_PROGRESS     ON
+)
+FetchContent_MakeAvailable(nodepp)
+
+#[...]
+
+target_link_libraries( #[...]
+	PUBLIC nodepp #[...]
+)
 ```
 
 ## Features
@@ -32,17 +51,10 @@ One of the standout features of Nodepp is its 100% asynchronous architecture, po
 ## Build & Run
 
 ```bash
-em++ -o www/index.html main.cpp           \
-     -I ./include -pthread -lwebsocket.js \
-    --shell-file ./shell.html --bind      \
-     -s NO_DISABLE_EXCEPTION_CATCHING     \
-     -s WEBSOCKET_SUBPROTOCOL=1 \
-     -s PTHREAD_POOL_SIZE=8     \
-     -s WEBSOCKET_URL=1         \
-     -s USE_PTHREADS=1          \
-     -s ASYNCIFY=1              \
-     -s FETCH=1                 \
-     -s WASM=1
+em++ -o www/index.html main.cpp -lembind -I ./include \
+    --shell-file ./shell.html --bind  \
+     -s NO_DISABLE_EXCEPTION_CATCHING \
+     -s ASYNCIFY=1 -s FETCH=1 -s WASM=1
 
 emrun ./www/index.html
 ```
@@ -50,8 +62,8 @@ emrun ./www/index.html
 ## Tests
 
 ```bash
-em++ -o www/index.html ./test/main.cpp \
-     -I ./include -pthread --bind      \
+em++ -o www/index.html ./test/main.cpp     \
+     -I ./include -pthread --bind -lembind \
      -s NO_DISABLE_EXCEPTION_CATCHING  \
      -s PTHREAD_POOL_SIZE=8            \
      -s USE_PTHREADS=1                 \
@@ -72,31 +84,28 @@ using namespace nodepp;
 void onMain() {
     console::log("Hello World!");
 }
-
-// note that we are using onMain() instead of main()
 ```
 
 ### HTTP Client
 ```cpp
 #include <nodepp/nodepp.h>
-#include <nodepp/fetch.h>
+#include <nodepp/http.h>
 
 using namespace nodepp;
 
 void onMain() {
 
     fetch_t args;
-            args.url = "https://localhost:8000/";
+            args.method = "GET";
+            args.url    = "http://localhost:6931/";
 
-    fetch::add( args )
+    http::fetch( args )
 
-    .then([=]( fetch_t res ){
-        console::log( "->", res.status );
-        console::log( res.headers["Content-Length"] );
-    })
+    .fail([=]( except_t err ){ console::log( err ); })
 
-    .fail([=]( except_t rej ){
-        console::log( rej );
+    .then([=]( http_t cli ){
+        console::log( stream::await( cli ) );
+        console::log( "->", cli.status );
     });
 
 }
@@ -128,15 +137,44 @@ void onMain() {
 }
 ```
 
-### More Examples [here](https://github.com/NodeppOfficial/Nodepp/tree/main/examples)
+### More Examples [here](https://nodeppofficial.github.io/nodepp-doc/guide.html)
 
-Check out some articles on [Medium](https://medium.com/@EDBCBlog)
+## Installing Nodepp-Wasm
 
-## Compatibility
+### Clone The Repository
+```bash
+git clone https://github.com/NodeppOfficial/nodepp-wasm ; cd nodepp
+```
+
+### Create a main.cpp File
+```bash
+touch main.cpp ; mkdir ./www
+```
+```cpp
+#include <nodepp/nodepp.h>
+
+using namespace nodepp;
+
+void onMain() {
+    console::log("Hello World!");
+}
+```
+
+### Build Your Code
+```bash
+em++ -o www/index.html main.cpp -lembind -I./include \
+    --shell-file ./shell.html --bind  \
+     -s NO_DISABLE_EXCEPTION_CATCHING \
+     -s ASYNCIFY=1 -s FETCH=1 -s WASM=1
+
+emrun ./www/index.html
+```
+
+## Nodepp Supports Other Platforms Too
 - 🔗: [NodePP for Window | Linux | Mac | Bsd ](https://github.com/NodeppOfficial/nodepp)
 - 🔗: [NodePP for Arduino](https://github.com/NodeppOfficial/nodepp-arduino)
 - 🔗: [Nodepp for WASM](https://github.com/NodeppOfficial/nodepp-wasm)
-  
+
 ## Contribution
 
 If you want to contribute to **Nodepp**, you are welcome to do so! You can contribute in several ways:
@@ -151,5 +189,4 @@ If you want to contribute to **Nodepp**, you are welcome to do so! You can contr
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/edbc_repo)
 
 ## License
-
-**Nodepp** is distributed under the MIT License. See the LICENSE file for more details.
+**Nodepp-WASM** is distributed under the MIT License. See the LICENSE file for more details.
