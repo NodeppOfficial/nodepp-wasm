@@ -11,6 +11,7 @@
 
 #ifndef NODEPP_WASM_WS
 #define NODEPP_WASM_WS
+#define INVALID_SOCEKT -1
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -44,7 +45,7 @@ protected:
 
     struct NODE {
         char state = FILE_STATE::CLOSE;
-        int     fd =-1;
+        int     fd = INVALID_SOCEKT;
     };  ptr_t<NODE> obj;
 
 private:
@@ -111,8 +112,8 @@ public: ws_t() noexcept : obj( new NODE() ){}
         process::add( coroutine::add( COROUTINE(){
         coBegin ; clb(); coNext;
 
-            do { ushort wait = 0; 
-                 emscripten_websocket_get_ready_state( self->obj->fd, &wait );
+            do{ ushort wait = 0; 
+                emscripten_websocket_get_ready_state( self->obj->fd, &wait );
             if( wait==0 ){ return 1; } elif( wait!=1 ) {
                 self->onError.emit( "Something Went Wrong" ); return -1;
             }} while(0);
@@ -140,7 +141,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     /*─······································································─*/
 
-    bool is_closed()    const noexcept { return is_state( FILE_STATE::DISABLE ); }
+    bool is_closed()    const noexcept { return is_state( FILE_STATE::DISABLE ) || obj->fd == INVALID_SOCEKT; }
     bool is_available() const noexcept { return !is_closed(); }
     int  get_fd()       const noexcept { return obj->fd; }
 

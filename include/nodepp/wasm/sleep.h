@@ -20,11 +20,11 @@
 
 namespace nodepp { namespace process {
 
-    inline ulong get_new_timeval() { char res [32];
-
-        auto size = EM_ASM_INT({
-            let data = Date.now() + ""; /*-----------------*/
-            stringToUTF8( data, $0, $1 ); return data.length;
+    inline ulong get_new_timeval() { 
+        
+        char res [32]; auto size = EM_ASM_INT({
+             let data = Date.now() + ""; /*-----------------*/
+             stringToUTF8( data, $0, $1 ); return data.length;
         }, res, 32 );
 
         return string::to_ullong( string_t( res, size ) );
@@ -42,9 +42,21 @@ namespace nodepp { namespace process {
 
 namespace nodepp { namespace process {
 
+    inline ulong set_timeout( int time=0 ) { 
+        if( time == -1 ) /*------------*/ { return 0; }
+    thread_local static ulong stamp; ulong out=stamp;
+        if( stamp > time || stamp == 0 ){ stamp=time; }
+    return out==0 ? 1 : out; }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace process {
+
     inline void delay( ulong time ){ emscripten_sleep( time ); }
 
-    inline void yield(){ emscripten_sleep(TIMEOUT); }
+    inline void yield(){ delay( TIMEOUT ); }
 
     inline ulong now(){ return millis(); }
 
