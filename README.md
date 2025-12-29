@@ -4,11 +4,26 @@
 [![Platform](https://img.shields.io/badge/platform-%20WASM%20-blue)](https://github.com/NodeppOfficial/nodepp-wasm)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Nodepp is a groundbreaking open-source project that simplifies C++ application development by bridging the gap between the language's raw power and the developer-friendly abstractions of Node.js. By providing a high-level API, Nodepp empowers developers to write C++ code in a familiar, Node.js-inspired style.
+Nodepp is a groundbreaking C++ framework that bridges the gap between the language's raw performance and the developer-friendly abstractions of Node.js. By providing a high-level, asynchronous API, Nodepp empowers you to write C++ with a familiar syntax—enabling seamless development across cloud servers, desktop apps, and microcontrollers.
 
-One of the standout features of Nodepp is its 100% asynchronous architecture, powered by an internal Event Loop. This design efficiently manages Nodepp’s tasks, enabling you to develop scalable and concurrent applications with minimal code. Experience the power and flexibility of Nodepp as you streamline your development process and create robust applications effortlessly!
+At its core, Nodepp features a 100% asynchronous architecture powered by an internal Event Loop. This allows for massive concurrency and scalable task management with minimal code complexity, effectively bringing the "Write Once, Run Everywhere" philosophy to the world of high-performance C++.
 
 🔗: [Nodepp The MOST Powerful Framework for Asynchronous Programming in C++](https://medium.com/p/c01b84eee67a)
+
+## 💡 Featured Project: Duck Hunt VR (WASM Edition)
+
+To showcase [Nodepp for Web](https://github.com/NodeppOfficial/nodepp-wasm), we ported the classic Duck Hunt to Virtual Reality, running natively in the browser via WebAssembly. This project pushes the limits of web-based VR by combining low-level C++ performance with modern Web APIs.
+
+https://github.com/user-attachments/assets/ab26287e-bd73-4ee8-941b-d97382e203c9
+
+Play it now: [Duck Hunt VR on Itch.io](https://edbcrepo.itch.io/duck-hunt-vr)
+
+## 💡 Featured Project: Cursed-Luna (WASM Remake)
+Cursed-Luna is a high-performance remake of the Global Game Jam 2018 classic. Originally built around the theme of Transmission, this version has been completely rewritten in C++ using Nodepp and Raylib to bring tight gameplay mechanics to the browser via WebAssembly.
+
+https://github.com/user-attachments/assets/3647b5b6-fbfd-4281-af0f-f35f3260a319
+
+Play it now: [Cursed-Luna on Itch.io](https://edbcrepo.itch.io/cursed-luna)
 
 ## Dependencies & Cmake Integration
 ```bash
@@ -36,21 +51,18 @@ target_link_libraries( #[...]
 
 ## Features
 
-- 📌: **Node.js-like API:** Write C++ code in a syntax and structure similar to Node.js, making it easier to learn and use.
-- 📌: **High-performance:** Leverage the speed and efficiency of C++ for demanding applications.
+- 📌: **Lightweight:** Minimal dependencies, making it ideal for IoT and embedded systems.
+- 📌: **Cross-Platform:** Write once, run on Linux, Windows, Mac, Android, WASM and Arduino/ESP32.
+- 📌: **Memory Efficient:** Custom `ptr_t`, `queue_t`, `array_t` and `string_t` primitives provide SSO (Small Stack Optimization) and zero-copy slicing.
 - 📌: **Scalability:** Build applications that can handle large workloads and grow with your needs.
 - 📌: **Open-source:** Contribute to the project's development and customize it to your specific requirements.
 
 ## Batteries Included
 
-- 📌: Include a **build-in JSON** parser / stringify system.
-- 📌: Include a **build-in RegExp** engine for processing text strings.
-- 📌: Include a **build-in System** that make every object **Async Task** safety.
-- 📌: Include Support for **Poll** making it easy to handle multiple file descriptors.
-- 📌: Include a **Smart Pointer** base **Garbage Collector** to avoid **Memory Leaks**.
-- 📌: Include support for **HTTP | WS** making it easy to create networked applications.
-- 📌: Include support for **Reactive Programming** based on **Events** and **Observers**.
-- 📌: Include an **Event Loop** that can handle multiple events and tasks on a single thread.
+- 📌: UTF Support: Comprehensive manipulation for UTF8, UTF16, and UTF32.
+- 📌: Built-in JSON & RegExp: Full parsing and text processing engines.
+- 📌: I/O Multiplexing: Support for Poll, Epoll, Kqueue, and WSAPoll.
+- 📌: Reactive Programming: Built-in Events and Observers system.
 
 ## Build & Run
 
