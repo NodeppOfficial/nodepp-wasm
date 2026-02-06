@@ -9,8 +9,8 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_WASM_MUTEX
-#define NODEPP_WASM_MUTEX
+#ifndef NODEPP_POSIX_MUTEX
+#define NODEPP_POSIX_MUTEX
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -33,7 +33,7 @@ namespace nodepp { class mutex_t {
 protected:
 
     struct NODE {
-        bool /*-*/ alive=1;
+        atomic_t<bool> alive=1;
         pthread_mutex_t fd;
     };  ptr_t<NODE> obj;
 

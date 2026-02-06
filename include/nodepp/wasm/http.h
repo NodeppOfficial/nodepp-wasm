@@ -41,11 +41,11 @@ namespace nodepp { struct http_t : public fetch_t, public file_t { public:
         this->filename= file;
     }
 
-    virtual ~http_t() noexcept { if( obj.count()>1 ){ return; } ::remove( filename.get() ); }
+   ~http_t() noexcept { if( obj.count()>1 ){ return; } ::remove( filename.get() ); }
 
     http_t() noexcept : fetch_t({}), file_t() {}
 
-};}
+}; using https_t = http_t; }
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -102,8 +102,6 @@ public:
     }
 
     fetch() : obj( new NODE() ) { obj->state = false; }
-
-    virtual ~fetch() noexcept {}
     
     /*─······································································─*/
 
@@ -171,10 +169,28 @@ namespace nodepp { namespace http {
              task->set_resolved_callback( res );
              task->set_rejected_callback( rej );
 
-        process::foop( task );
+        process::add( task );
 
     }); }
 
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace https {
+
+    inline promise_t<https_t,except_t> fetch( const fetch_t& fetch ) {
+    return promise_t<https_t,except_t>([=]( res_t<https_t> res, rej_t<except_t> rej ){
+
+        if( !url::is_valid( fetch.url ) ){ rej(except_t("invalid URL")); return; }
+
+        auto task = type::bind( new generator::fetch( fetch ) );
+             task->set_resolved_callback( res );
+             task->set_rejected_callback( rej );
+
+        process::add( task );
+
+    }); }
 
 }}
 
