@@ -28,14 +28,17 @@ namespace nodepp { namespace fs {
     /*─······································································─*/
 
     inline void read_file( const string_t& path, function_t<void,string_t> cb ){
-        if( path.empty() ){ return; } file_t _file( path, "r" );
-        _file.onData( cb ); stream::pipe(_file);
+        if( path.empty() ){ return; } try {
+            file_t _file( path, "r" );
+            _file.onData( cb ); stream::pipe(_file);
+        } catch( except_t ) {}
     }
 
     inline string_t read_file( const string_t& path ){ string_t s;
-        if( path.empty() ){ return s; }
-        file_t _file( path, "r" );
-        return stream::await(_file);
+        if( path.empty() ){ return s; } try {
+            file_t _file( path, "r" );
+            return stream::await(_file);
+        } catch( except_t ) {} return nullptr;
     }
 
     /*─······································································─*/
@@ -44,20 +47,21 @@ namespace nodepp { namespace fs {
         if ( src.empty() || des.empty() ) return -1;
         try{ file_t _file_a ( src, "r" );
              file_t _file_b ( des, "w" );
-             stream::pipe( _file_a, _file_b ); return  0;
-        } catch(...) { return -1; }
+             stream::pipe( _file_a, _file_b ); 
+        return 0; } catch( except_t ) { return -1; }
     }
 
     /*─······································································─*/
 
     inline int rename_file( const string_t& oname, const string_t& nname ) {
-        if( oname.empty() || nname.empty() ) return -1;
+        if( oname.empty() || nname.empty() ){ return -1;}
         return rename( oname.c_str(), nname.c_str() );
     }
 
     /*─······································································─*/
 
     inline int move_file( const string_t& oname, const string_t& nname ) {
+        if( oname.empty() || nname.empty() ){ return -1;}
         return rename_file( oname, nname );
     }
 
@@ -71,17 +75,17 @@ namespace nodepp { namespace fs {
     /*─······································································─*/
 
     inline bool exists_file( const string_t& path ){
-         if ( path.empty() )     { return 0; }
+        if  ( path.empty() )/*-*/{ return 0; }
         try { file_t( path, "r" ); return 1;
-            } catch(...){} return 0;
+            } catch( except_t ){ } return 0;
     }
 
     /*─······································································─*/
 
     inline int create_file( const string_t& path ){
-        if ( path.empty() )      { return -1; }
-        try{ file_t( path, "w+" ); return  1;
-        } catch(...){ return 0; }
+        if  ( path.empty() )/*--*/{ return -1; }
+        try { file_t( path, "w+" ); return  1;
+            } catch( except_t )   { return  0; }
     }
 
     /*─······································································─*/
@@ -89,7 +93,7 @@ namespace nodepp { namespace fs {
     inline ulong file_size( const string_t& path ){
         try{ file_t file( path, "r" );
              return file.size();
-        } catch(...) { return 0; }
+        } catch( except_t ) { return 0; }
     }
 
     /*─······································································─*/

@@ -41,11 +41,11 @@ namespace nodepp { struct http_t : public fetch_t, public file_t { public:
         this->filename= file;
     }
 
-    virtual ~http_t() noexcept { if( obj.count()>1 ){ return; } ::remove( filename.get() ); }
+   ~http_t() noexcept { if( obj.count()>1 ){ return; } ::remove( filename.get() ); }
 
     http_t() noexcept : fetch_t({}), file_t() {}
 
-};}
+}; using https_t = http_t; }
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -67,7 +67,20 @@ protected:
         auto self = type::cast<fetch>( args->userData );
         /**/ self->obj->file.write( data );
     }
-    
+
+    /*─······································································─*/
+
+    static void fail( emscripten_fetch_t* args ) {
+
+        auto self= type::cast<fetch>(args->userData);
+        auto rej = self->obj->rej; header_t headers ;
+        auto res = self->obj->res; self->close();
+
+        rej( except_t( "Something Went Wrong" ) );
+        emscripten_fetch_close( args ); return;
+
+    }
+
     /*─······································································─*/
 
     static void callback( emscripten_fetch_t* args ) {
@@ -79,7 +92,7 @@ protected:
         if( args->status == 0 ){
             rej( except_t( "Something Went Wrong" ) );
             emscripten_fetch_close( args ); return;
-        }   progress( args ); self->obj->file.close();
+        }   /*>>*/ progress( args ); /*<<*/
 
         string_t raw ( emscripten_fetch_get_response_headers_length( args ), '\0' );
         emscripten_fetch_get_response_headers( args, raw.get(), raw.size() );
@@ -102,8 +115,6 @@ public:
     }
 
     fetch() : obj( new NODE() ) { obj->state = false; }
-
-    virtual ~fetch() noexcept {}
     
     /*─······································································─*/
 
@@ -115,7 +126,7 @@ public:
     
             if ( obj->ctx.timeout != 0 ){ attr.timeoutMSecs = obj->ctx.timeout; }
             for( auto& x: obj->ctx.headers.data() ){
-                 obj->hdr.push( x.first.c_str()  );
+                 obj->hdr.push( x.first .c_str() );
                  obj->hdr.push( x.second.c_str() );
             }    obj->hdr.push( nullptr );
 
@@ -123,7 +134,7 @@ public:
             obj->file           = file_t( obj->filename, "w" );
     
             attr.attributes     = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-            //                  | EMSCRIPTEN_FETCH_STREAM_DATA;
+            //                  | EMSCRIPTEN_FETCH_STREAM_DATA   ;
 
             attr.userData       = type::cast<void>( this );
             attr.requestHeaders = (char**) obj->hdr.data();
@@ -131,14 +142,13 @@ public:
             attr.requestData    = obj->ctx.body.get();
             attr.onprogress     = progress;
             attr.onsuccess      = callback;
-            attr.onerror        = callback;
+            attr.onerror        = fail    ;
     
             emscripten_fetch( &attr, obj->ctx.url.get() );
 
         } while(0); coWait( is_closed()==false );
 
-    coFinish
-    }
+    coFinish }
     
     /*─······································································─*/
 
@@ -154,7 +164,7 @@ public:
 
     bool is_closed() const noexcept { return obj->state==false; }
 
-    void     close() const noexcept {        obj->state =false; }
+    void     close() const noexcept { /*--*/ obj->state =false; }
 
 };}}
 
@@ -171,10 +181,28 @@ namespace nodepp { namespace http {
              task->set_resolved_callback( res );
              task->set_rejected_callback( rej );
 
-        process::foop( task );
+        process::add( task );
 
     }); }
 
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace https {
+
+    inline promise_t<https_t,except_t> fetch( const fetch_t& fetch ) {
+    return promise_t<https_t,except_t>([=]( res_t<https_t> res, rej_t<except_t> rej ){
+
+        if( !url::is_valid( fetch.url ) ){ rej(except_t("invalid URL")); return; }
+
+        auto task = type::bind( new generator::fetch( fetch ) );
+             task->set_resolved_callback( res );
+             task->set_rejected_callback( rej );
+
+        process::add( task );
+
+    }); }
 
 }}
 
