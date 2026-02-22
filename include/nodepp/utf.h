@@ -24,15 +24,15 @@ inline ptr_t<uint32> utf8_to_utf32( const ptr_t<uint8>& utf8 ) {
             codepoint = byte; i += 1;
         } elif ((byte & 0xE0) == 0xC0) {
             if (i + 1 >= utf8.size()){ throw except_t("Invalid UTF-8 sequence"); return nullptr; }
-            codepoint = (byte & 0x1F) << 6 | (utf8[i + 1] & 0x3F);
+            codepoint = static_cast<uint32>(byte & 0x1F) << 6 | (utf8[i + 1] & 0x3F);
             i += 2;
         } elif ((byte & 0xF0) == 0xE0) {
             if (i + 2 >= utf8.size()){ throw except_t("Invalid UTF-8 sequence"); return nullptr; }
-            codepoint = (byte & 0x0F) << 12 | (utf8[i + 1] & 0x3F) << 6 | (utf8[i + 2] & 0x3F);
+            codepoint = static_cast<uint32>(byte & 0x0F) << 12 | (utf8[i + 1] & 0x3F) << 6 | (utf8[i + 2] & 0x3F);
             i += 3;
         } elif ((byte & 0xF8) == 0xF0) {
             if (i + 3 >= utf8.size()){ throw except_t("Invalid UTF-8 sequence"); return nullptr; }
-            codepoint = (byte & 0x07) << 18 | (utf8[i + 1] & 0x3F) << 12 | (utf8[i + 2] & 0x3F) << 6 | (utf8[i + 3] & 0x3F);
+            codepoint = static_cast<uint32>(byte & 0x07) << 18 | (utf8[i + 1] & 0x3F) << 12 | (utf8[i + 2] & 0x3F) << 6 | (utf8[i + 3] & 0x3F);
             i += 4;
         } else { throw except_t("Invalid UTF-8 byte"); return nullptr; }
 
@@ -74,15 +74,15 @@ inline ptr_t<uint16> utf8_to_utf16( const ptr_t<uint8>& utf8 ) {
             codepoint = byte; i += 1;
         } elif ((byte & 0xE0) == 0xC0) {
             if (i+1 >= utf8.size()){ throw except_t("Invalid UTF-8 sequence"); return nullptr; }
-            codepoint = (byte & 0x1F) << 6 | (utf8[i + 1] & 0x3F); 
+            codepoint = static_cast<uint32>(byte & 0x1F) << 6 | (utf8[i + 1] & 0x3F); 
             i += 2;
         } elif ((byte & 0xF0) == 0xE0) {
             if (i+2 >= utf8.size()){ throw except_t("Invalid UTF-8 sequence"); return nullptr; }
-            codepoint = (byte & 0x0F) << 12 | (utf8[i + 1] & 0x3F) << 6 | (utf8[i + 2] & 0x3F);
+            codepoint = static_cast<uint32>(byte & 0x0F) << 12 | (utf8[i + 1] & 0x3F) << 6 | (utf8[i + 2] & 0x3F);
             i += 3;
         } elif ((byte & 0xF8) == 0xF0) {
             if (i+3 >= utf8.size()){ throw except_t("Invalid UTF-8 sequence"); return nullptr; }
-            codepoint = (byte & 0x07) << 18 | (utf8[i + 1] & 0x3F) << 12 | (utf8[i + 2] & 0x3F) << 6 | (utf8[i + 3] & 0x3F);
+            codepoint = static_cast<uint32>(byte & 0x07) << 18 | (utf8[i + 1] & 0x3F) << 12 | (utf8[i + 2] & 0x3F) << 6 | (utf8[i + 3] & 0x3F);
             i += 4;
         } else { throw except_t("Invalid UTF-8 sequence"); return nullptr; }
 

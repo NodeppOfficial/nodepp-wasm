@@ -1,20 +1,22 @@
 #include <nodepp/nodepp.h>
-#include <nodepp/bind.h>
+#include <nodepp/http.h>
 
 using namespace nodepp;
 
-void onMain(){
+void onMain() {
 
-    process::add( coroutine::add( COROUTINE(){
-    coBegin
+    fetch_t args;
+            args.method = "GET";
+            args.url    = "http://localhost:6931/";
 
-        while( true ){ EM_EVAL( _STRING_(
-           document.querySelector("[counter]").innerHTML = 'Hello World! ${0}';
-        ), process::now() ); coDelay(1000); }
+    http::fetch( args )
+    
+    .then([=]( http_t cli ){
+        console::log( cli.read() );
+    })
 
-    coFinish
-    }));
-
-    console::log("hello world!");
+    .fail([=]( except_t err ){
+        console::log( err.what() );
+    });
 
 }

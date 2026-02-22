@@ -14,101 +14,31 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace conio { enum color {
-    black = 0x00, white  = 0x01,
-    green = 0x02, red    = 0x03,
-    blue  = 0x04, cyan   = 0x05,
-    yellow= 0x06, magenta= 0x07,
-    bold  = 0x10  /*----------*/
-};}}
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
 namespace nodepp { namespace conio {
 
-    /*─······································································─*/
-
-    inline int perr( const string_t& args ){ return fprintf( stderr, "%s", args.c_str() ); }
+    inline int perr( const string_t& args ){ return ::fwrite( args.get(), sizeof(char), args.size(), stderr ); }
     
-    inline int pout( const string_t& args ){ return fprintf( stdout, "%s", args.c_str() ); }
+    inline int pout( const string_t& args ){ return ::fwrite( args.get(), sizeof(char), args.size(), stdout ); }
 
     template< class V, class... T >
-    int scan( const V& argc, const T&... args ){ 
-        return scanf( (const char*)argc, args... ); 
-    }
+    int scan( const V& argc, const T&... args ){ return scanf( (const char*)argc, args... ); }
 
     /*─······································································─*/
 
     template< class... T >
     int log( const T&... args ){
-        auto data = string::join( " ", args... ) + "\033[0m";
+        auto  data = string::join( " ", args..., "\n" );
         pout( data ); return data.size();
     }
 
     template< class... T >
     int err( const T&... args ){
-        auto data = string::join( " ", args... ) + "\033[0m";
+        auto  data = string::join( " ", args..., "\n" );
         perr( data ); return data.size();
     }
-
-    template< class... T >
-    string_t join( const T&... args ){ 
-        return string::join( " ", args... ); 
-    }
-
-    /*─······································································─*/
-    
-    inline int set_position( int x, int y ){ return pout(string::format("\033[%d;%dH",x,y)); }
-    inline int gotoxy( int x, int y ){ return set_position( x, y ); }
-
-    /*─······································································─*/
-
-    inline int undescore(){ return pout("\033[4m"); }
-    inline int   inverse(){ return pout("\033[7m"); }
-    inline int     reset(){ return pout("\033[0m"); }
-    inline int     clear(){ return pout("\033c\n"); }
-
-    /*─······································································─*/
-
-    inline int background( int state ){ 
-        if( state & 0x10 ){ pout("\033[1m"); state &= 0x0f; }
-        switch( state )   {
-            case color::black:   return pout("\033[40m"); break;
-            case color::white:   return pout("\033[47m"); break;
-            case color::green:   return pout("\033[42m"); break;
-            case color::red:     return pout("\033[41m"); break;
-            case color::blue:    return pout("\033[44m"); break;
-            case color::cyan:    return pout("\033[46m"); break;
-            case color::yellow:  return pout("\033[43m"); break;
-            case color::magenta: return pout("\033[45m"); break;
-        }   return -1;
-    }
-
-    inline int foreground( int state ){
-        if( state & 0x10 ){ pout("\033[1m"); state &= 0x0f; }
-        switch( state )   {
-            case color::black:   return pout("\033[30m"); break;
-            case color::white:   return pout("\033[37m"); break;
-            case color::green:   return pout("\033[32m"); break;
-            case color::red:     return pout("\033[31m"); break;
-            case color::blue:    return pout("\033[34m"); break;
-            case color::cyan:    return pout("\033[36m"); break;
-            case color::yellow:  return pout("\033[33m"); break;
-            case color::magenta: return pout("\033[35m"); break;
-        }   return -1;
-    }
-
-    /*─······································································─*/
-
-    inline int error( string_t msg ){ foreground( color::red    | color::bold ); return log( msg ); }
-    inline int  info( string_t msg ){ foreground( color::cyan   | color::bold ); return log( msg ); }
-    inline int  done( string_t msg ){ foreground( color::green  | color::bold ); return log( msg ); }
-    inline int  warn( string_t msg ){ foreground( color::yellow | color::bold ); return log( msg ); }
 
 }}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
-
-/*────────────────────────────────────────────────────────────────────────────*/

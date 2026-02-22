@@ -11,6 +11,7 @@
 
 #ifndef NODEPP_WASM_WS
 #define NODEPP_WASM_WS
+#define INVALID_SOCEKT -1
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -27,24 +28,24 @@ protected:
     return false; }
 
     void set_state( uchar value ) const noexcept {
-    if( obj->state & KILL ){ return; }
+    if( obj->state & STATE::FS_STATE_KILL ){ return; }
         obj->state = value;
     }
 
-    enum FILE_STATE {
-        UNKNOWN = 0b00000000,
-        OPEN    = 0b00000001,
-        CLOSE   = 0b00000010,
-        KILL    = 0b00000100,
-        REUSE   = 0b00001000,
-        DISABLE = 0b00001110
+    enum STATE {
+         FS_STATE_UNKNOWN = 0b00000000,
+         FS_STATE_OPEN    = 0b00000001,
+         FS_STATE_CLOSE   = 0b00000010,
+         FS_STATE_KILL    = 0b00000100,
+         FS_STATE_REUSE   = 0b00001000,
+         FS_STATE_DISABLE = 0b00001110
     };
 
 protected:
 
     struct NODE {
-        char state = FILE_STATE::CLOSE;
-        int     fd =-1;
+        char state = STATE::FS_STATE_CLOSE;
+        int     fd = INVALID_SOCEKT;
     };  ptr_t<NODE> obj;
 
 private:
@@ -66,7 +67,7 @@ private:
     static EM_BOOL WS_EVENT_OPEN( int /*unused*/, const EmscriptenWebSocketOpenEvent* ev, void* userData ) {
         if( userData == nullptr ){ return EM_FALSE; }  auto user = type::cast<queue_t<void*>>( userData );
         auto x = user->first(); while( x != nullptr ){ auto z = type::cast<ws_t>( x->data ); auto y = x->next;
-            if( z->obj->fd==ev->socket ){ z->set_state( FILE_STATE::OPEN );
+            if( z->obj->fd==ev->socket ){ z->set_state( STATE::FS_STATE_OPEN );
                 z->onOpen.emit(*z); /*-*/ z->onConnect.emit(*z); break; }
         x = y; } return EM_TRUE;
     }
@@ -82,7 +83,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     /*─······································································─*/
 
-    virtual ~ws_t() noexcept { if( obj.count() > 1 ) { return; } free(); }
+   ~ws_t() noexcept { if( obj.count() > 1 ) { return; } free(); }
 
     /*─······································································─*/
 
@@ -111,13 +112,14 @@ public: ws_t() noexcept : obj( new NODE() ){}
         process::add( coroutine::add( COROUTINE(){
         coBegin ; clb(); coNext;
 
-            do { ushort wait = 0; 
-                 emscripten_websocket_get_ready_state( self->obj->fd, &wait );
+            do{ ushort wait = 0; 
+                emscripten_websocket_get_ready_state( self->obj->fd, &wait );
             if( wait==0 ){ return 1; } elif( wait!=1 ) {
-                self->onError.emit( "Something Went Wrong" ); return -1;
-            }} while(0);
+                self->onError.emit( "Something Went Wrong" ); 
+            return -1; }} while(0);
 
-            coWait( self->is_state( FILE_STATE::OPEN ) ); self->close();
+            while( self->is_state( STATE::FS_STATE_OPEN ) )
+                 { coDelay(1000); } self->close();
 
         coFinish
         }));
@@ -128,7 +130,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     void free()  const noexcept { if( !is_available() ){ return; } 
         emscripten_websocket_delete( obj->fd );
-        set_state( FILE_STATE::CLOSE ); 
+        set_state( STATE::FS_STATE_CLOSE ); 
         onConnect.clear(); 
         onError  .clear();
         onData   .clear(); onClose.emit();
@@ -140,7 +142,7 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     /*─······································································─*/
 
-    bool is_closed()    const noexcept { return is_state( FILE_STATE::DISABLE ); }
+    bool is_closed()    const noexcept { return is_state( STATE::FS_STATE_DISABLE ) || obj->fd == INVALID_SOCEKT; }
     bool is_available() const noexcept { return !is_closed(); }
     int  get_fd()       const noexcept { return obj->fd; }
 

@@ -15,7 +15,6 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #include "encoder.h"
-#include "query.h"
 #include "regex.h"
 #include "map.h"
 
@@ -31,7 +30,6 @@ struct url_t {
     string_t pathname;
     string_t search;
     string_t origin;
-    query_t  query;
     string_t auth;
     string_t host;
     string_t hash;
@@ -176,18 +174,13 @@ namespace url {
     
     /*─······································································─*/
 
-    inline query_t query( const string_t& URL ){ return query::parse( search(URL) ); }
-    
-    /*─······································································─*/
-
-    inline url_t parse( const string_t& URL ){ url_t data;
-	if( !is_valid( URL ) ) return data;
+    inline url_t parse( const string_t& URL ){
+	if( !is_valid( URL ) ){ return url_t(); } url_t data;
 
         data.hostname = hostname( URL );
         data.protocol = protocol( URL );
         data.search   = search( URL );
         data.origin   = origin( URL );
-	    data.query    = query( URL );
         data.pathname = path( URL );
         data.port     = port( URL );
         data.host     = host( URL );
@@ -198,8 +191,8 @@ namespace url {
         data.href     = URL;
 
         data.path = data.pathname + data.search;
-        return data; 
-    }
+
+    return data; }
     
     /*─······································································─*/
 
@@ -223,8 +216,6 @@ namespace url {
 
         if( !obj.search.empty() ){
             _url += obj.search;
-        } else {
-            _url += query::format( obj.query );
         }
 
         if( !obj.hash.empty() ){ _url += obj.hash; }
