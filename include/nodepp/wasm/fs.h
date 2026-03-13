@@ -4,19 +4,13 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #ifndef NODEPP_WASM_FS
 #define NODEPP_WASM_FS
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#include <sys/stat.h>
-#include <dirent.h>
-#include <time.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -27,37 +21,120 @@ namespace nodepp { namespace fs {
 
     /*─······································································─*/
 
-    inline void read_file( const string_t& path, function_t<void,string_t> cb ){
-        if( path.empty() ){ return; } file_t _file( path, "r" );
-        _file.onData( cb ); stream::pipe(_file);
+    inline bool exists_file( const string_t& path ){
+        FILE* fp = fopen( path.get(), "r" );
+        if( fp == nullptr ){ return 0; }
+        fclose(fp); /*----*/ return 1;
     }
 
-    inline string_t read_file( const string_t& path ){ string_t s;
-        if( path.empty() ){ return s; }
-        file_t _file( path, "r" );
-        return stream::await(_file);
-    }
+    /*─······································································─*/
+
+    inline promise_t<string_t,except_t> read_file( const string_t& path ){
+    return promise_t<string_t,except_t> ([=]( 
+        res_t<string_t> res,  rej_t<except_t> rej
+    ){
+
+        if( !exists_file( path ) ){ rej( "file not found" ); return; }
+
+        auto rd1 = type::bind( generator::file::read() );
+        auto fl1 = type::bind( file_t( path, "r" ) );
+        auto bff = ptr_t<string_t>( 0UL );
+
+        process::add( coroutine::add( COROUTINE(){
+        coBegin
+
+            while( fl1->is_available() ){
+                
+                coWait( (*rd1)( &fl1 ) == 1 );
+                if( rd1->state==0 ){ break; }
+
+               *bff += rd1->data;
+
+            coNext; } res( *bff );
+
+        coFinish
+        }));
+
+    }); }
+
+    /*─······································································─*/
+
+    inline promise_t<ulong,except_t> write_file( const string_t& path, const string_t& message ){
+    return promise_t<ulong,except_t> ([=]( 
+        res_t<ulong> res, rej_t<except_t> rej
+    ){
+        
+        if( !exists_file( path ) ){ rej( "file not found" ); return; }
+
+        auto rd1 = type::bind( generator::file::write() );
+        auto fl1 = type::bind( file_t( path, "w" ) );
+        auto bff = ptr_t<ulong>( 0UL, 0UL );
+
+        process::add( coroutine::add( COROUTINE(){
+        coBegin
+
+            while( fl1->is_available() ){
+                
+                coWait( (*rd1)( &fl1, message ) == 1 );
+                if( rd1->state==0 ){ break; }
+
+               *bff += rd1->state;
+
+            coNext; } res( *bff );
+
+        coFinish
+        }));
+
+    }); }
+
+    /*─······································································─*/
+
+    inline promise_t<ulong,except_t> append_file( const string_t& path, const string_t& message ){
+    return promise_t<ulong,except_t> ([=]( 
+        res_t<ulong> res,  rej_t<except_t> rej
+    ){
+        
+        if( !exists_file( path ) ){ rej( "file not found" ); return; }
+
+        auto rd1 = type::bind( generator::file::write() );
+        auto fl1 = type::bind( file_t( path, "a+" ) );
+        auto bff = ptr_t<ulong>( 0UL, 0UL );
+
+        process::add( coroutine::add( COROUTINE(){
+        coBegin
+
+            while( fl1->is_available() ){
+                
+                coWait( (*rd1)( &fl1, message ) == 1 );
+                if( rd1->state==0 ){ break; }
+
+               *bff += rd1->state;
+
+            coNext; } res( *bff );
+
+        coFinish
+        }));
+
+    }); }
 
     /*─······································································─*/
 
     inline int copy_file( const string_t& src, const string_t& des ){
-        if ( src.empty() || des.empty() ) return -1;
-        try{ file_t _file_a ( src, "r" );
-             file_t _file_b ( des, "w" );
-             stream::pipe( _file_a, _file_b ); return  0;
-        } catch(...) { return -1; }
-    }
+        if( !exists_file( src ) ){ return -1; } 
+        stream::pipe( file_t( src, "r" ), file_t( des, "w" ) ); 
+    return 1; }
 
     /*─······································································─*/
 
     inline int rename_file( const string_t& oname, const string_t& nname ) {
-        if( oname.empty() || nname.empty() ) return -1;
+        if( oname.empty() || nname.empty() ){ return -1; }
         return rename( oname.c_str(), nname.c_str() );
     }
 
     /*─······································································─*/
 
     inline int move_file( const string_t& oname, const string_t& nname ) {
+        if( oname.empty() || nname.empty() ){ return -1; }
         return rename_file( oname, nname );
     }
 
@@ -70,38 +147,17 @@ namespace nodepp { namespace fs {
 
     /*─······································································─*/
 
-    inline bool exists_file( const string_t& path ){
-         if ( path.empty() )     { return 0; }
-        try { file_t( path, "r" ); return 1;
-            } catch(...){} return 0;
-    }
-
-    /*─······································································─*/
-
     inline int create_file( const string_t& path ){
-        if ( path.empty() )      { return -1; }
-        try{ file_t( path, "w+" ); return  1;
-        } catch(...){ return 0; }
+        if( path.empty() ){ return -1; }
+        file_t( path,"w+"); return  1;
     }
 
     /*─······································································─*/
 
     inline ulong file_size( const string_t& path ){
-        try{ file_t file( path, "r" );
-             return file.size();
-        } catch(...) { return 0; }
-    }
-
-    /*─······································································─*/
-
-    inline void write_file( const string_t& path, const string_t& data ){
-        file_t file( path, "w" ); file.write( data );
-    }
-
-    /*─······································································─*/
-
-    inline void append_file( const string_t& path, const string_t& data ){
-        file_t file( path, "a" ); file.write( data );
+        if( exists_file( path ) ){
+            return file_t( path, "r" ).size();
+        }   return 0;
     }
 
     /*─······································································─*/
