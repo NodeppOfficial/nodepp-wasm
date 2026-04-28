@@ -1,20 +1,26 @@
 #include <nodepp/nodepp.h>
-#include <nodepp/bind.h>
+#include <nodepp/encoder.h>
+#include <nodepp/webrtc.h>
 
 using namespace nodepp;
 
-void onMain(){
+void onMain() {
 
-    process::add( coroutine::add( COROUTINE(){
-    coBegin
+    auto arg = fetch_webrtc_t();
+         arg.peer_id = "my_personal_id";
 
-        while( true ){ EM_EVAL( _STRING_(
-           document.querySelector("[counter]").innerHTML = 'Hello World! ${0}';
-        ), process::now() ); coDelay(1000); }
+    auto rtc = webrtc::connect( &arg );
 
-    coFinish
-    }));
+    rtc.onSignal([=]( string_t ice ){
+        console::log( ">>", json::parse( encoder::base64::btoa( ice ) )["candidate"].as<string_t>() );
+    });
 
-    console::log("hello world!");
+    auto off = rtc.create_offer().await();
+
+    if( !off.has_value() ){ 
+        console::log( "-0-", off.error() ); 
+    return; }
+
+    console::log( off.value() );
 
 }
