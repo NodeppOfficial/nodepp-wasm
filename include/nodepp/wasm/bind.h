@@ -53,11 +53,6 @@ EM_VAL EM_EVAL( const string_t& code, const T&... args ) {
     return EM_VAL::global().call<EM_VAL>("eval",EM_STRING(eval.get()));
 }}
 
-namespace nodepp { 
-object_t EM_JSON( const EM_VAL& value ) {
-    return json::parse( EM_CALL( EM_GET("JSON"), "stringify", value ).as<EM_STRING>().c_str() );
-}}
-
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #define BIND_ADD( NAME, CALLBACK ) emscripten::function( NAME, CALLBACK );

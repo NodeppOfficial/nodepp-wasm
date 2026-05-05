@@ -1,4 +1,5 @@
 #include <nodepp/nodepp.h>
+//#include <nodepp/https.h>
 #include <nodepp/http.h>
 #include <nodepp/test.h>
 
@@ -28,7 +29,7 @@ namespace TEST { namespace HTTP {
                    else /*-------------*/{ *x = 2; }
                 })
 
-                .fail([=]( except_t err ){ *x = -1; });
+                .fail([=]( except_t ){ *x = -1; });
 
                 while( *x==0 ){ process::next(); }
                switch( *x ){
@@ -56,6 +57,50 @@ namespace TEST { namespace HTTP {
             } catch ( ... ) { TEST_FAIL(); }
         });
 
+        /*
+        TEST_ADD( test, "TEST 3 | HTTPS Fetch (Promise)", [](){
+            try { ptr_t<int> x = new int(0);
+
+                fetch_t args; ssl_t ssl;
+                        args.url    = "https://localhost:6931/index.html";
+                        args.method = "GET";
+
+                https::fetch( args, &ssl )
+
+                .then([=]( https_t cli ){
+                    if( cli.status==200 ){ *x = 1; }
+                   else                  { *x = 2; }
+                })
+
+                .fail([=]( except_t ){ *x = -1; });
+
+                while( *x==0 ){ process::next(); }
+               switch( *x ){
+                    case 1: TEST_DONE(); break;
+                    case 2: TEST_FAIL(); break;
+                   default: TEST_SKIP(); break;
+                }
+                              TEST_FAIL();
+            } catch ( ... ) { TEST_FAIL(); }
+        });
+
+        TEST_ADD( test, "TEST 4 | HTTPS Fetch (await)", [](){
+            try { ptr_t<int> x = new int(0);
+
+                fetch_t args; ssl_t ssl;
+                        args.url    = "https://localhost:6931/index.html";
+                        args.method = "GET";
+
+                auto fetch = https::fetch( args, &ssl ).await();
+
+                if( !fetch.has_value() )       { TEST_SKIP(); }
+                if( fetch.value().status==200 ){ TEST_DONE(); }
+
+                              TEST_FAIL();
+            } catch ( ... ) { TEST_FAIL(); }
+        });
+        */
+
         test.onClose.once([=](){
             console::log("\nRESULT | total:", *totl, "| passed:", *done, "| error:", *err, "| skipped:", *skp );
         });
@@ -69,5 +114,3 @@ namespace TEST { namespace HTTP {
     }
 
 }}
-
-// void onMain(){ TEST::CONSOLE::TEST_RUNNER(); }

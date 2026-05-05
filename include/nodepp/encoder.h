@@ -44,7 +44,7 @@ namespace nodepp { namespace encoder { namespace hash {
 
     inline ulong get( int key, int tableSize ) { return key % tableSize; }
 
-    inline ulong get( const string_t& key )    { return get( key, HASH_TABLE_SIZE ); }
+    inline ulong get( const string_t& key )    { return get( key, NODEPP_HASH_TABLE_SIZE ); }
 
 }}}
 
@@ -113,7 +113,7 @@ namespace nodepp { namespace encoder { namespace bin {
 
     template< class T >
     ptr_t<bool> get( T num ){
-        ptr_t<bool> out ( sizeof(num) * 8, 0 );
+    ptr_t<bool> out ( sizeof(num) * 8, 0 );
         for ( auto x=sizeof(num)*8; x--; ){
               out[x] = num & 1 ; num >>= 1;
         }     return out;
@@ -152,7 +152,7 @@ namespace nodepp { namespace encoder { namespace hex {
     template< class T, class = typename type::enable_if<type::is_integral<T>::value,T>::type >
     T set( string_t num ){ if ( num.empty() ){ return 0; }
         T out = 0; for ( auto c: num ){    out  = out<<4;
-              if ( c >= '0' && c <= '9' ){ out |= c - '0'     ; }
+            if   ( c >= '0' && c <= '9' ){ out |= c - '0'     ; }
             elif ( c >= 'a' && c <= 'f' ){ out |= c - 'a' + 10; }
             elif ( c >= 'A' && c <= 'F' ){ out |= c - 'A' + 10; }
             else { return 0; }
@@ -249,16 +249,15 @@ namespace nodepp { namespace encoder { namespace base64 {
             }
         }
 
-        if (pos2>-6) out.push(NODEPP_BASE64[((pos1<<8)>>(pos2+8))&0x3F]);
-        while (out.size()%4){ out.push('='); }
-
-        out.push('\0'); return string_t( out.data() );
+        if( pos2>-6 ){ out.push(NODEPP_BASE64[((pos1<<8)>>(pos2+8))&0x3F]); }
+        while( out.size()%4 ){ out.push('='); } out.push('\0'); 
+        
+        return string_t( out.data() );
     }
 
     inline string_t set( const string_t &in ) {
 
-        queue_t<char> out; int pos1=0, pos2=-8;
-        array_t<int> T( 256, -1 );
+        queue_t<char> out; int pos1=0, pos2=-8; ptr_t<int> T( 256, -1 );
 
         for ( int i=0; i<64; ++i ) T[NODEPP_BASE64[i]] = i;
         for ( uchar c: in ) { if ( T[c]==-1 ) break;

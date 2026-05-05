@@ -14,11 +14,6 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include <emscripten/websocket.h>
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-namespace nodepp { queue_t<void*> user; }
 namespace nodepp { class ws_t {
 protected:
 
@@ -27,48 +22,30 @@ protected:
     return false; }
 
     void set_state( uchar value ) const noexcept {
-    if( obj->state & KILL ){ return; }
+    if( obj->state & STATE::FS_STATE_KILL ){ return; }
+        obj->fd.call<EM_VAL>( "close" );
         obj->state = value;
     }
 
-    enum FILE_STATE {
-        UNKNOWN = 0b00000000,
-        OPEN    = 0b00000001,
-        CLOSE   = 0b00000010,
-        KILL    = 0b00000100,
-        REUSE   = 0b00001000,
-        DISABLE = 0b00001110
+    enum STATE {
+         FS_STATE_UNKNOWN = 0b00000000,
+         FS_STATE_OPEN    = 0b00000001,
+         FS_STATE_CLOSE   = 0b00000010,
+         FS_STATE_KILL    = 0b00000100,
+         FS_STATE_REUSE   = 0b00001000,
+         FS_STATE_DISABLE = 0b00001110
     };
 
 protected:
 
     struct NODE {
-        char state = FILE_STATE::CLOSE;
-        int     fd =-1;
+        char state= STATE::FS_STATE_CLOSE; 
+        EM_VAL fd ; string_t addr;
     };  ptr_t<NODE> obj;
 
-private:
-
-    static EM_BOOL WS_EVENT_MESSAGE( int /*unused*/, const EmscriptenWebSocketMessageEvent* ev, void* userData ) {
-        if( userData == nullptr ){ return EM_FALSE; }  auto user = type::cast<queue_t<void*>>( userData );
-        auto x = user->first(); while( x != nullptr ){ auto z = type::cast<ws_t>( x->data ); auto y = x->next;
-            if( z->obj->fd==ev->socket ){ z->onData.emit( string_t( (char*)ev->data, ev->numBytes ) ); break; }
-        x = y; } return EM_TRUE;
-    }
-
-    static EM_BOOL WS_EVENT_CLOSE( int /*unused*/, const EmscriptenWebSocketCloseEvent* ev, void* userData ) {
-        if( userData == nullptr ){ return EM_FALSE; }  auto user = type::cast<queue_t<void*>>( userData );
-        auto x = user->first(); while( x != nullptr ){ auto z = type::cast<ws_t>( x->data ); auto y = x->next;
-            if( z->obj->fd==ev->socket ){ user->erase(x); z->close(); break; }
-        x = y; } return EM_TRUE;
-    }
-
-    static EM_BOOL WS_EVENT_OPEN( int /*unused*/, const EmscriptenWebSocketOpenEvent* ev, void* userData ) {
-        if( userData == nullptr ){ return EM_FALSE; }  auto user = type::cast<queue_t<void*>>( userData );
-        auto x = user->first(); while( x != nullptr ){ auto z = type::cast<ws_t>( x->data ); auto y = x->next;
-            if( z->obj->fd==ev->socket ){ z->set_state( FILE_STATE::OPEN );
-                z->onOpen.emit(*z); /*-*/ z->onConnect.emit(*z); break; }
-        x = y; } return EM_TRUE;
+    void kill() const noexcept {
+        set_state( STATE::FS_STATE_KILL );
+        process::revoke( obj->addr );
     }
 
 public: ws_t() noexcept : obj( new NODE() ){}
@@ -82,56 +59,73 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     /*─······································································─*/
 
-    virtual ~ws_t() noexcept { if( obj.count() > 1 ) { return; } free(); }
+   ~ws_t() noexcept { if( obj.count() > 1 ) { return; } free(); }
 
     /*─······································································─*/
 
     ws_t( const string_t& url ) noexcept : obj( new NODE() ) {
+        
+        auto krn  = type::bind( process::NODEPP_EVLOOP() );
         auto self = type::bind( this );
 
-        if( !emscripten_websocket_is_supported() ){
-            onError.emit( "WS not Supported" );
-            close(); return;
-        }
+        obj->addr = process::invoke([=]( any_t raw ){
+        auto value= raw.as<EM_VAL>(); krn->wake();
 
-        function_t<void> clb = [=](){
-            ptr_t<EmscriptenWebSocketCreateAttributes> attr ;
-            attr = new EmscriptenWebSocketCreateAttributes();
+            switch( value["type"].as<int>() ){
 
-            attr->url                = url.c_str();
-            attr->protocols          = nullptr;
-            attr->createOnMainThread = EM_TRUE;
+                case 3: self->onError.emit( value["data"].as<EM_STRING>().c_str() ); break; 
+                case 0: do {
 
-            self->obj->fd = emscripten_websocket_new( &attr ); user.push( &self );
-            emscripten_websocket_set_onopen_callback   ( self->obj->fd, &user, WS_EVENT_OPEN    );
-            emscripten_websocket_set_onclose_callback  ( self->obj->fd, &user, WS_EVENT_CLOSE   );
-            emscripten_websocket_set_onmessage_callback( self->obj->fd, &user, WS_EVENT_MESSAGE );
-        };
+                    self->obj->state = STATE::FS_STATE_OPEN;
+                    self->obj->fd    = value[ "data" ];
+                    self->onOpen   .emit(*self); 
+                    self->onConnect.emit(*self);
 
-        process::add( coroutine::add( COROUTINE(){
-        coBegin ; clb(); coNext;
+                } while(0); return 1; break;
+                
+                case 1: do {
 
-            do { ushort wait = 0; 
-                 emscripten_websocket_get_ready_state( self->obj->fd, &wait );
-            if( wait==0 ){ return 1; } elif( wait!=1 ) {
-                self->onError.emit( "Something Went Wrong" ); return -1;
-            }} while(0);
+                    auto raw = value["data"].as<EM_STRING>(); 
+                    string_t buffer ( raw.c_str(), raw.length() );
+                    self->onData.emit( buffer ); 
 
-            coWait( self->is_state( FILE_STATE::OPEN ) ); self->close();
+                } while(0); return 1; break;
 
-        coFinish
-        }));
+            }
+
+        return -1; });
+
+        EM_EVAL( _STRING_(( function(){
+            
+            const cli = new WebSocket( "${0}" ); const addr= "${2}"; 
+                  cli.binaryType= "arraybuffer";
+
+            cli.onclose = (e) => {
+                ${1}._nodepp_invoke_( addr, { type: 2 } );
+            };
+
+            cli.onopen  = (e) => {
+                ${1}._nodepp_invoke_( addr, { type: 0, data: cli } );
+            };
+
+            cli.onmessage = (e) => {
+                ${1}._nodepp_invoke_( addr, { type: 1, data: e.data } );
+            };
+
+            cli.onerror = (e) => {
+                ${1}._nodepp_invoke_( addr, { type: 3, data: "could not connect to the server" } );
+            };
+
+        })(); ), url, NODEPP_MODULE_NAME, obj->addr );
 
     }
 
     /*─······································································─*/
 
-    void free()  const noexcept { if( !is_available() ){ return; } 
-        emscripten_websocket_delete( obj->fd );
-        set_state( FILE_STATE::CLOSE ); 
-        onConnect.clear(); 
-        onError  .clear();
-        onData   .clear(); onClose.emit();
+    void free() const noexcept { if( !is_available() ){ return; } 
+        kill(); /*------*/ onClose.emit ();
+        onConnect.clear(); onError.clear();
+        onData   .clear(); onClose.clear();
     }
 
     void close() const noexcept { if( !is_available() ){ return; }
@@ -140,9 +134,9 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     /*─······································································─*/
 
-    bool is_closed()    const noexcept { return is_state( FILE_STATE::DISABLE ); }
+    bool is_closed()    const noexcept { return  is_state ( STATE::FS_STATE_DISABLE ) || obj->state == 0x00; }
     bool is_available() const noexcept { return !is_closed(); }
-    int  get_fd()       const noexcept { return obj->fd; }
+    int  get_fd()       const noexcept { return (int) &obj->fd; }
 
     /*─······································································─*/
 
@@ -150,17 +144,11 @@ public: ws_t() noexcept : obj( new NODE() ){}
 
     int write( string_t msg ) const noexcept {
         if( msg.empty() ){ return 0; } if( is_closed() ){ return -1; }
-        return emscripten_websocket_send_binary( obj->fd, msg.get(), msg.size() );
+        obj->fd.call<EM_VAL>( "send", EM_STRING( msg.get(), msg.size() ) );
+        return msg.size();
     }
 
 }; using tcp_t = ws_t; }
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-namespace nodepp { namespace ws {
-    inline ws_t  client( const string_t& url ) { return ws_t(url); }
-    inline ws_t connect( const string_t& url ) { return ws_t(url); }
-}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

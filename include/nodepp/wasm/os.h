@@ -31,6 +31,8 @@ namespace nodepp { namespace os {
 
     inline string_t cwd(){ return "/"; }
 
+    inline uint    cpus(){ return 1; }
+
     /*─······································································─*/
 
     inline uint error(){ return errno; }
