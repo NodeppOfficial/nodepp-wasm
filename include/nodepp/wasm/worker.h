@@ -9,105 +9,144 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_WASM_WORKER
-#define NODEPP_WASM_WORKER
+#ifndef NODEPP_POSIX_WORKER
+#define NODEPP_POSIX_WORKER
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { class worker_t { 
 private:
 
-    mutex_t& mut(){ static mutex_t mut; return mut; }
-    struct waiter { bool blk; bool out; };
+    mutex_t   &  get_mutex () const noexcept { static mutex_t    out; return out; }
+    invoke_t<>& get_invoker() const noexcept { static invoke_t<> out; return out; }
+
+    enum STATE {
+         WK_STATE_UNKNOWN = 0b00000000,
+         WK_STATE_OPEN    = 0b00000001,
+         WK_STATE_CLOSE   = 0b00000010,
+         WK_STATE_KILL    = 0b10000000,
+         WK_STATE_AWAIT   = 0b00000111,
+    };
 
 protected:
 
     struct NODE {
+        void* addr=nullptr;
+        void* krn =nullptr;
+        pthread_t       id;
+        int          state;
         function_t<int> cb;
-        bool* out, state=0;
-        pthread_t /*-*/ id;
     };  ptr_t<NODE> obj;
 
     static void* callback( void* arg ){
-        auto self = type::cast<worker_t>(arg); self->obj->state=1;
-        while( self->obj->cb.emit() >= 0 ){ worker::yield(); } 
-        self->mut().emit([=](){ self->free(); return -1; });
-        /*----*/ delete self; worker::exit(); 
-    return nullptr; }
+        auto self = type::cast<worker_t>(arg);
+        self->obj->krn = &process::kernel();
+
+        while( !self->is_closed( ) ){
+        if   ( self->obj->cb()==-1 ){ break; }
+            auto info = coroutine::getno();
+            auto time = info.delay;
+            process::delay( time==0 ? 1 : time );
+        }
+
+    self->free(); return nullptr; }
 
 public:
 
     template< class T, class... V >
     worker_t( T cb, const V&... arg ) noexcept : obj( new NODE() ){
-
-        ptr_t<waiter> wrk = new waiter();
         auto clb = type::bind(cb);
-        wrk->blk = 0; wrk->out =1;
-        obj->out = &wrk->out;
-
-        obj->cb = function_t<int>([=](){ 
-            if( wrk->out==0 ){ return -1; }
-            if( wrk->blk==1 ){ return  1; } 
-                wrk->blk =1; int rs=(*clb)( arg... );
-            if( clb.null()  ){ return -1; }  
-                wrk->blk =0;   return !wrk->out?-1:rs;
-        }); 
-
+        obj->cb  = function_t<int>([=](){ return (*clb)(arg...); });
     }
     
     /*─······································································─*/
+
+   ~worker_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
     worker_t() noexcept : obj( new NODE ) {}
 
-    virtual ~worker_t() noexcept { if( obj.count()>1 ){ return; } free(); }
-    
-    /*─······································································─*/
-
     void free() const noexcept {
-        if( obj->state == 0 ){ return; } 
-            obj->state=0; --_TASK_; 
+         if( obj->state == 0x00 ) /*---------*/ { return; }
+         if( obj->state & STATE::WK_STATE_KILL ){ return; }
+         get_mutex  ().lock([=](){ get_invoker().emit( obj->addr ); });
     }
     
     /*─······································································─*/
 
-    pthread_t pid() const noexcept { return obj->id; }
+    expected_t<kernel_t,except_t> kernel() const noexcept {
+        if( obj->krn==nullptr ){ return except_t( "kernel not found" ); }
+        return * ( type::cast<kernel_t>( obj->krn ) );
+    }
 
-    /*─······································································─*/
+    bool is_sleeping() const noexcept {
+        if( obj->krn==nullptr ){ return false; }
+        return type::cast<kernel_t>( obj->krn )->is_sleeping();
+    }
+
+    void wake() const noexcept { 
+        if( obj->krn==nullptr ){ return; }
+        type::cast<kernel_t>( obj->krn )->wake();
+    }
     
-    void      off() const noexcept { process::clear( obj->out ); }
-    void    close() const noexcept { process::clear( obj->out ); }
+    /*─······································································─*/
+
+    void    off() const noexcept { obj->state = STATE::WK_STATE_AWAIT; }
+    void  close() const noexcept { obj->state = STATE::WK_STATE_AWAIT; }
     
     /*─······································································─*/
 
-    int add() const noexcept {
-        if( obj->state == 1 ){ return 0; } auto self = new worker_t( *this );
+    bool is_closed() const noexcept { 
+    char x = obj->state;
+        return ( x & STATE::WK_STATE_KILL  ) ||
+               ( x & STATE::WK_STATE_CLOSE ) ||
+                 x== STATE::WK_STATE_UNKNOWN ;
+    }
+    
+    /*─······································································─*/
 
-        auto pth = pthread_create( &obj->id, NULL, &callback, (void*)self );
-        if( pth!= 0 ){ delete self; return -1; }
+    int emit() const noexcept {
+    if( obj->state != STATE::WK_STATE_UNKNOWN && !NODEPP_SHTDWN() ){ return 0; }
         
-        pthread_detach( obj->id ); ++_TASK_;
+        auto krn = type::bind( process::NODEPP_EVLOOP() );
+        auto self= type::bind( this );
 
-        while( obj->state==0 ){ /*------------*/ } 
-    //  while( obj->state==1 ){ process::next(); } 
+        obj->state=STATE::WK_STATE_OPEN;
+        obj->addr = get_invoker().add([=](){
+            self->obj->state = STATE::WK_STATE_CLOSE | STATE::WK_STATE_KILL;
+            self->obj->krn   = nullptr;
+        krn->wake(); return -1; });
 
-        return 1;
-    }
+        auto pth = pthread_create( &obj->id, NULL, &callback, (void*) &self );
+        if ( pth!= 0 ){ return -1; } pthread_detach( obj->id ); 
+
+    //  while( obj->state & STATE::WK_STATE_OPEN ){ process::next(); }
+        
+    return 1; }
+
+    /*─······································································─*/
+
+    int add() const noexcept { return emit(); }
 
     /*─······································································─*/
 
     int await() const noexcept {
-        if( obj->state == 1 ){ return 0; } auto self = new worker_t( *this );
+    if( obj->state != STATE::WK_STATE_UNKNOWN && !NODEPP_SHTDWN() ){ return 0; }
+        
+        auto krn = type::bind( process::NODEPP_EVLOOP() );
+        auto self= type::bind( this );
 
-        auto pth = pthread_create( &obj->id, NULL, &callback, (void*)self );
-        if( pth!= 0 ){ delete self; return -1; }
+        obj->state=STATE::WK_STATE_OPEN;
+        obj->addr = get_invoker().add([=](){
+            self->obj->state = STATE::WK_STATE_CLOSE | STATE::WK_STATE_KILL;
+            self->obj->krn   = nullptr;
+        krn->wake(); return -1; });
 
-        pthread_detach( obj->id ); ++_TASK_;
+        auto pth = pthread_create( &obj->id, NULL, &callback, (void*) &self );
+        if ( pth!= 0 ){ return -1; } pthread_detach( obj->id );
 
-        while( obj->state==0 ){ /*------------*/ } 
-        while( obj->state==1 ){ process::next(); } 
-
-        return 1;
-    }
+        while( obj->state & STATE::WK_STATE_OPEN ){ process::next(); }
+        
+    return 1; }
 
 };}
 
