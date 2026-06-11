@@ -71,7 +71,7 @@ namespace nodepp { namespace http {
             auto raw  = value["data"]  .as<EM_STRING>();
             string_t data ( raw.c_str(), raw.length() );
 
-            auto    name= string::format( "%lu_%s", process::now(), addr.c_str() );
+            auto    name= regex::format( "${0}_${1}", process::now(), addr );
             fetch_t args; file_t ( name, "w" );
                     args.filename= name; 
                     args.status  = stte;
@@ -106,9 +106,9 @@ namespace nodepp { namespace http {
             })
 
             .then( res => {
-                ${2}._nodepp_invoke_( "${3}", {
+                Module.__invoker__( "${2}", {
                     type   : 1, 
-                    addr   : "${3}",
+                    addr   : "${2}",
                     data   : res.body, 
                     status : res.status,
                     headers: res.headers
@@ -116,12 +116,12 @@ namespace nodepp { namespace http {
             })
 
             .catch( err => {
-                ${2}._nodepp_invoke_( "${3}", {
+                Module.__invoker__( "${2}", {
                     type: 0, data: err.message 
                 });
             });
 
-        ), fetch.url, obj, NODEPP_MODULE_NAME, addr );
+        ), fetch.url, obj, addr );
 
     }); }
 

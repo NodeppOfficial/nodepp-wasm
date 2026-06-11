@@ -24,19 +24,20 @@ namespace nodepp { namespace generator { namespace file {
     template< class T > coEmit( T* str, ulong size = NODEPP_CHUNK_SIZE ){
     coBegin; data.clear(); state=0; d=0;
 
-        if( !str->is_available()       ){ coEnd; } r=str->get_range();
-        if( !str->get_borrow().empty() ){ data = str->get_borrow(); }
+        if( !str->is_available()       ){ coEnd; } r=str->get_range ();
+        if( !str->get_borrow().empty() ){ data =/*-*/str->get_borrow(); }
 
-        if( r[1] != 0  ){ auto pos = str->pos(); d = r[1]-r[0];
+        if( r[1] != 0  ){ auto pos=str->pos(); d=r[1]-r[0];
         if( pos < r[0] ){ str->del_borrow(); str->pos(r[0]); }
       elif( pos >=r[1] ){ coEnd; } } else { d = str->get_buffer_size(); }
 
         if( data.empty() ){ 
             coWait((state=str->_read(str->get_buffer_data(),min(d,size)))==-2);
-        if( state<=0 ){ coEnd; }
-        if( state >0 ){ data=string_t(str->get_buffer_data(),(ulong)state); }}
+        if( state <= 0 ) { coEnd; } else { 
+            data=string_t( str->get_buffer_data(), state );
+        }}
 
-        state = min( data.size(), size ); /*---------------*/
+        state=/*--*/min( data.size(), size );
         str->set_borrow( data.splice( state, data.size() ) );
 
     coFinish }};
@@ -46,14 +47,14 @@ namespace nodepp { namespace generator { namespace file {
     GENERATOR( write ){
     public: ulong data; int state;
 
-    template< class T > coEmit( T* str, const string_t& msg ){
+    template< class T > coEmit( T* str, string_t msg ){
     coBegin state=0; data=0;
 
         if(!str->is_available() || msg.empty() ){ coEnd; }
 
         do{ coWait((state=str->_write( msg.data()+data, msg.size()-data ))==-2 );
-        if( state<=0 ){ coEnd; }
-        if( state >0 ){ data += state; }} while ( state>=0 && data<msg.size() );
+        if( state<=0 ) { break; } else { data += state; }} 
+        while( state>=0 && data<msg.size() );
 
     coFinish }};
 
@@ -421,11 +422,13 @@ namespace nodepp { namespace generator { namespace ws {
     /*─······································································─*/
 
     template< class T > bool server( T& cli ) { do {
-        auto data = cli.read(); cli.set_borrow( data );
+        auto data = cli.read(); int c=0; 
+        cli.set_borrow( data );
 
-        int c=0; while( (c=cli.read_header())==1 ) 
-        { /*unused*/ } if( c!=0 ) { break; }
-
+        while((c=cli.read_header())==1 ){
+        if   ( cli.is_waiting() ){ process::next(); }}
+        
+        if( c!=0 ) /*----------------*/ { break; }
         if( cli.headers.has("Sec-Websocket-Key") ){
 
             string_t sec = cli.headers["Sec-Websocket-Key"];
@@ -457,7 +460,10 @@ namespace nodepp { namespace generator { namespace ws {
         });
 
         cli.write_header( "GET", url::path(url), "HTTP/1.1", header );
-        int c=0; while( (c=cli.read_header())==1 ){ /*unused*/ }
+        int c=0; 
+
+        while((c=cli.read_header())==1 ){
+        if   ( cli.is_waiting() ){ process::next(); }}
 
         if( c != 0 ){
             cli.onError.emit("Could not connect to server");

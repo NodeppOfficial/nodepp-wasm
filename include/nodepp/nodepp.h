@@ -19,10 +19,10 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace process {
-
-    inline array_t<string_t>& NODEPP_ARGMNT(){ /**/ static array_t<string_t> out; return out; }
-    inline kernel_t & /*---*/ NODEPP_EVLOOP(){ thread_local static kernel_t  out; return out; }
-    inline emitter_t& /*---*/ NODEPP_INVOKE(){ thread_local static emitter_t out; return out; }
+    
+    inline array_t<string_t>& NODEPP_ARGMNT(){ /*-*/ static array_t<string_t>/*-*/ out; return out; }
+    inline kernel_t& /*----*/ NODEPP_EVLOOP(){ thread_local static kernel_t /*--*/ out; return out; }
+    inline invoke_t<any_t>&   NODEPP_INVOKE(){ thread_local static invoke_t<any_t> out; return out; }
     
     /*─······································································─*/
 
@@ -34,12 +34,12 @@ namespace nodepp { namespace process {
 
 extern "C" {
     inline int external_call( EM_STRING address, EM_VAL value ){
-        return call( string_t( address.c_str() ), value );
+        return call( string::to_u64( address ), value );
     }
 }
 
     template< class... T >
-    string_t invoke( const T&... args ){ return NODEPP_INVOKE().add( args... ); }
+    uint64_t invoke( const T&... args ){ return NODEPP_INVOKE().add( args... ); }
     
     /*─······································································─*/
 
@@ -70,13 +70,16 @@ extern "C" {
 
     /*─······································································─*/
 
-    inline int next(){ return NODEPP_EVLOOP().next(); }
-
     inline void exit( int err=0 ){ 
     if( should_close() ){ goto DONE; } do {
         auto *raw = &NODEPP_SHTDWN(); 
              *raw = true; clear(); 
     } while(0); DONE:; ::exit(err); }
+
+    inline int next(){ 
+        /*--*/ NODEPP_ALLOC ().next();
+        return NODEPP_EVLOOP().next(); 
+    }
 
 }}
 
@@ -94,8 +97,20 @@ namespace nodepp { namespace process {
     /*─······································································─*/
 
     inline void start(){
+
         NODEPP_SIGNAL().onSIGEXIT.once( [=](){ 
         process::exit(0); }); signal::start();
+
+        auto addr= process::invoke([=]( any_t raw ){
+        auto val = raw.as<EM_VAL>(); 
+        auto &tmp= EM_MODULE(); tmp=val; return -1; });
+
+        MAIN_THREAD_EM_ASM({
+            Module.__handle__=( e )=>{ return emval_handles[e]; };
+            Module.__bridge__=( e )=>{ return eval(e); };
+            Module.__invoker__( `${$0}`, Module );
+        },  addr );
+
     }
 
     /*─······································································─*/
@@ -114,7 +129,7 @@ namespace nodepp { namespace process {
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-BIND( _LINE_ ){ BIND_ADD( "_nodepp_invoke_", nodepp::process::external_call ); };
+EM_BIND( "__invoker__", nodepp::process::external_call );
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

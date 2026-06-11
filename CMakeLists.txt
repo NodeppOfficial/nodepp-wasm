@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.6)
 project(nodepp VERSION 1.3.0)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -19,9 +19,9 @@ target_link_libraries( nodepp INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/libmbedcrypto.a"
     
     "-sEXPORTED_RUNTIME_METHODS=['HEAPF32']"
-    "-sNO_DISABLE_EXCEPTION_CATCHING"
     "-sFORCE_FILESYSTEM=1"
     "-sASYNCIFY=1"
+    "-sUSE_ZLIB=1"
     "-sWASM=1"
     "-lembind"
 

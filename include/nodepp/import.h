@@ -20,6 +20,7 @@
 
 #include <typeinfo>
 #include <cstring>
+#include <cstdint>
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
@@ -42,6 +43,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include "allocator.h"
 #include "ptr.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -68,16 +70,12 @@
 #include "loop.h"
 #include "signal.h"
 #include "except.h"
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
 #include "os.h"
-#include "query.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include "query.h"
 #include "bind.h"
-#include "invoke.h"
 #include "kernel.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/

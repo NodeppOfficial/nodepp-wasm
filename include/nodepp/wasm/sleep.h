@@ -24,7 +24,7 @@ namespace nodepp { namespace process {
 
     inline ulong  micros(){ return get_time_interval() / 1000000; }
 
-    inline ulong seconds(){ return get_time_interval() / 1000; }
+    inline ulong seconds(){ return get_time_interval() * 1000; }
 
     inline ulong  millis(){ return get_time_interval(); }
 

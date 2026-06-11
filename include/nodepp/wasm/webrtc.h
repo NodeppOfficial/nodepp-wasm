@@ -14,13 +14,20 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+namespace nodepp { struct url_webrtc_t {
+    string_t url ; string_t user; 
+    string_t pass; /*----------*/
+};}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 namespace nodepp { struct agent_webrtc_t {
 
-    string_t url             = "stun:stun.l.google.com:19302";
     string_t peer_id         ;
     bool     order           = false;
-    bool     ice_restart     = false;
+    bool     ice_restart     = true ;
     int      max_retransmits = 0;
+    ptr_t<url_webrtc_t>  url ;
 
 };}
 
@@ -41,28 +48,35 @@ protected:
     enum STATE {
          FS_STATE_UNKNOWN = 0b00000000,
          FS_STATE_OPEN    = 0b00000001,
+         FS_STATE_REUSE   = 0b01000001,
          FS_STATE_CLOSE   = 0b00000010,
+         FS_STATE_READING = 0b00010000,
+         FS_STATE_WRITING = 0b00100000,
          FS_STATE_KILL    = 0b00000100,
-         FS_STATE_REUSE   = 0b00001000,
+         FS_STATE_STOP    = 0b00001000,
          FS_STATE_DISABLE = 0b00001110
     };
 
 protected:
 
     struct NODE {
-        EM_VAL pc,dc; uchar64 pd ; 
-        uchar64 addr; uchar64 tag;
-        int state= FS_STATE_CLOSE;
+        int state = FS_STATE_CLOSE ;
+        EM_VAL  pc,dc; uchar_64 pd ; 
+        uchar_64 addr; uchar_64 tag;
+        agent_webrtc_t /**/ agent;
     };  ptr_t<NODE> obj;
 
     void kill() const noexcept {
-        set_state( STATE::FS_STATE_KILL );
-        obj->dc.call<EM_VAL>( "close" ); 
-        process::revoke( obj->addr );
+        if( !obj->dc.isUndefined() ) { obj->dc.call<EM_VAL>( "close" ); }
+        if( !obj->pc.isUndefined() ) { obj->pc.call<EM_VAL>( "close" ); }
+        process::revoke( obj->addr ); set_state( STATE::FS_STATE_KILL ); 
+        obj->dc = EM_VAL::undefined();
+        obj->pc = EM_VAL::undefined();
     }
 
 public:
 
+    event_t<>         onRenegociation;
     event_t<webrtc_t> onConnect;
     event_t<string_t> onSignal ;
     event_t<>         onDrain  ;
@@ -73,24 +87,28 @@ public:
 
     /*─······································································─*/
 
-    webrtc_t( agent_webrtc_t* args=nullptr ) : obj( new NODE() ) {
-        auto conf = args==nullptr ? agent_webrtc_t() : *args;
+    webrtc_t( agent_webrtc_t* args ) : obj( new NODE() ) {
+        obj->agent = args==nullptr ? agent_webrtc_t() : *args;
+ 
+        if( obj->agent.url.empty() )
+          { NODEPP_THROW_ERROR( "invalid stun server" ); }
 
-        if( conf.url.empty() )
-          { onError.emit( "invalid stun server" ); return; }
-
-        if( conf.peer_id.empty() )
-          { onError.emit( "invalid peer ID" );     return; }
+        if( obj->agent.peer_id.empty() )
+          { NODEPP_THROW_ERROR( "invalid peer ID" ); }
 
         auto krn  = type::bind( process::NODEPP_EVLOOP() );
         auto self = type::bind( this );
-        obj->addr = process::invoke([=]( any_t raw ){
-        auto value= raw.as<EM_VAL>(); krn->wake();
-        switch( value["type"].as<int>() ){
 
-            case 0: self->onSignal.emit( value["data"].as<EM_STRING>().c_str() ); return 1; break;
+        obj->addr = process::invoke([=]( any_t raw ){
+        auto value= raw.as<EM_VAL>(); krn->wake(); switch( value["type"].as<int>() ){
+
+            case 0: self->onSignal.emit( value["data"].as<EM_STRING>().c_str() ); return  1; break;
             case 4: self->onError .emit( value["data"].as<EM_STRING>().c_str() );
-            case 3: self->free(); break;
+            case 3: self->free(); /*-------------------------------------------*/ return -1; break;
+
+            case 5: self->obj->pc = value["data"]; return 1; break;
+            case 7: self->obj->dc = value["data"]; return 1; break;
+            case 6: self->onRenegociation.emit (); return 1; break;
 
             case 2: do {
                 auto raw = value["data"].as<EM_STRING>(); 
@@ -98,41 +116,61 @@ public:
                 self->onData.emit( buffer ); 
             } while(0); return 1; break;
 
-            case 5: self->set_state( STATE::FS_STATE_OPEN );
-                    self->obj->dc = value["data"][1]; 
-                    self->obj->pc = value["data"][0];
-            return 1; /*--------*/ break;
-
-            case 1: self->onConnect.emit( *self );
+            case 1: self->set_state( STATE::FS_STATE_OPEN );
+                    self->onConnect.emit( *self );
                     self->onOpen   .emit( *self );
             return 1; /*--------*/ break;
 
         } return -1; });
 
-        EM_EVAL( _STRING_(( function(){
+        auto tmp0 = array_t<object_t>(); for( auto x: obj->agent.url ){
+        auto tmp  = object_t();
+             if( !x.url .empty() ){ tmp["urls"]       = x.url ; }
+             if( !x.user.empty() ){ tmp["username"]   = x.user; }
+             if( !x.pass.empty() ){ tmp["credential"] = x.pass; }
+        tmp0.push( tmp ); }
 
-            const obj = ${2}; const addr = "${0}";
-            const pc  = new RTCPeerConnection({ iceServers: [{ urls: obj["url"] }] });
-            const dc  = pc.createDataChannel ( obj["peer_id"], { ordered: obj["order"], maxRetransmits: obj["max"] }); 
-            
-            dc.onmessage      = (e) => ${1}._nodepp_invoke_( addr, { type: 2, data: e.data });
-            dc.onopen         = ( ) => ${1}._nodepp_invoke_( addr, { type: 1 });
-            dc.onclose        = ( ) => ${1}._nodepp_invoke_( addr, { type: 3 });
+        auto tmp1 = json::stringify( object_t({ 
+        { "iceServers"        , tmp0         },
+        { "iceTransportPolicy", "all"        },
+        { "bundlePolicy"      , "max-bundle" },
+        { "rtcpMuxPolicy"     , "require"    } }) );
+
+        auto tmp2 = json::stringify( object_t({
+        { "ordered"       , obj->agent.order           },
+        { "maxRetransmits", obj->agent.max_retransmits } }) );
+
+        EM_EVAL( _STRING_(
+            const addr= "${0}";
+        try{const pc  = new RTCPeerConnection( ${1} );
+
+            pc.ondatachannel = ({ channel }) => {
+            let dc = channel ; dc.binaryType= "arraybuffer";
+                dc.onerror   = (e)=>{ Module.__invoker__( addr, { type: 4, data: e.data }); };
+                dc.onmessage = (e)=>{ Module.__invoker__( addr, { type: 2, data: e.data }); };
+                dc.onopen    = ( )=>{ Module.__invoker__( addr, { type: 1 }); };
+                dc.onclose   = ( )=>{ Module.__invoker__( addr, { type: 3 }); };
+                /*-----------------*/ Module.__invoker__( addr, { type: 7, data: dc });
+            };
+
+            pc.addEventListener( "iceconnectionstatechange", (e) => {
+            if( pc.iceConnectionState === "failed" ){ 
+            if( pc.connectionState    === "failed" ){ 
+                /*-------------*/ Module.__invoker__( addr, { type: 3 } ); return; }
+                pc.restartIce();  Module.__invoker__( addr, { type: 6 } );
+            }});
+
             pc.onicecandidate = (e) => { if( e.candidate ){ 
-                ${1}._nodepp_invoke_( addr, { type: 0, data: btoa( JSON.stringify( e.candidate ) ) });
-            }}; ${1}._nodepp_invoke_( addr, { type: 5, data: [ pc, dc ] } );
+                Module.__invoker__( addr, { type: 0, data: btoa( JSON.stringify( e.candidate ) ) });
+            }}; Module.__invoker__( addr, { type: 5, data: pc } ); 
 
-        })(); ), obj->addr, NODEPP_MODULE_NAME, json::stringify( object_t({
-
-            { "id"         , conf.peer_id         },
-            { "url"        , conf.url             },
-            { "order"      , conf.order           },
-            { "ice_restart", conf.ice_restart     },
-            { "max"        , conf.max_retransmits }
-
-        }) ));
+        } catch(e) {
+            Module.__invoker__( addr, { type: 4, data: "could not connect to the server" });
+        }), obj->addr, tmp1 );
 
     }
+
+    webrtc_t() : obj( new NODE() ) {}
 
     /*─······································································─*/
 
@@ -141,32 +179,42 @@ public:
     /*─······································································─*/
 
     bool    is_closed() const noexcept { return  is_state ( STATE::FS_STATE_DISABLE ) || obj->state == 0x00; }
-    bool is_available() const noexcept { return !is_closed()  ; }
-    int        get_fd() const noexcept { return (int)&obj->fd ; }
-    uchar64&   get_pd() const noexcept { return /*-*/ obj->pd ; }
-    uchar64&      tag() const noexcept { return /*-*/ obj->tag; }
+    bool is_connected() const noexcept { return !is_closed() && is_state( STATE::FS_STATE_OPEN ); }
+    bool is_available() const noexcept { return !is_closed(); }
 
     /*─······································································─*/
 
-    void free() const noexcept { if( !is_available() ){ return; } 
-        onDrain.emit(); kill(); onClose.emit();
-         onConnect.clear(); onError.clear();
-         onData   .clear(); onClose.clear();
+    uchar_64   get_fd() const noexcept { return (uchar_64) obj->dc.as_handle(); }
+    uchar_64&  get_pd() const noexcept { return obj->pd ; }
+    uchar_64&     tag() const noexcept { return obj->tag; }
+
+    /*─······································································─*/
+
+    void free() const noexcept {
+
+        if( is_state( STATE::FS_STATE_KILL  ) ){ return; } kill();
+        if(!is_state( STATE::FS_STATE_CLOSE ) ){ onDrain .emit (); }
+       
+        onClose.emit (); onRenegociation.clear();
+        onError.clear(); onConnect.clear();
+        onClose.clear(); onData   .clear();
+
     }
 
-    void close() const noexcept { if( !is_available() ){ return; }
-         onDrain.emit(); free();
-    }
+    void close() const noexcept {
+        if( is_state ( STATE::FS_STATE_DISABLE ) ){ return; } onDrain.emit(); 
+            set_state( STATE::FS_STATE_CLOSE   );
+    free(); }
 
     /*─······································································─*/
 
     promise_t<string_t,except_t> create_offer() const noexcept {
+           auto self = type::bind( this );
     return promise_t<string_t,except_t>([=](
            res_t<string_t> res, rej_t<except_t> rej
     ){
 
-        if( !is_available() ){ rej( "webrtc closed" ); return; } 
-        auto self = type::bind( this );
+        if( self->is_state( STATE::FS_STATE_KILL ) ){ rej( "webrtc closed" ); return; } 
 
         auto addr = process::invoke([=]( any_t raw ){
         auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
@@ -174,32 +222,52 @@ public:
             case  1: res( value["data"].as<EM_STRING>().c_str() ); break;
         } return -1; });
 
-        EM_EVAL( _STRING_( ( async function(){
-        try {
+        auto tmp1 = json::stringify( object_t({
+        { "iceRestart"    , obj->agent.ice_restart     } }) );
 
-            const pc    = emval_handles[${1}];
-            const offer = await pc.createOffer( );
-            await pc.setLocalDescription( offer );
+        auto tmp2 = json::stringify( object_t({
+        { "ordered"       , obj->agent.order           },
+        { "maxRetransmits", obj->agent.max_retransmits } }) );
 
-            ${2}._nodepp_invoke_( "${0}", { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
+        EM_EVAL( _STRING_(( async ()=>{
+            const addr = "${0}";
+            const ctx  = "${5}";
+        
+        try{
+
+            const pc = Module.__handle__   ( ${1} );
+            const dc = pc.createDataChannel( "${4}", ${3} );
+
+            dc.binaryType= "arraybuffer";
+
+            dc.onerror   = (e)=>{ Module.__invoker__( ctx, { type: 4, data: e.data }); };
+            dc.onmessage = (e)=>{ Module.__invoker__( ctx, { type: 2, data: e.data }); };
+            dc.onopen    = ( )=>{ Module.__invoker__( ctx, { type: 1 }); };
+            dc.onclose   = ( )=>{ Module.__invoker__( ctx, { type: 3 }); };
+            
+            const of = await pc.createOffer /*--*/ (${2});
+            /*------*/ await pc.setLocalDescription( of );
+            
+            Module.__invoker__( ctx , { type: 7, data: dc });
+            Module.__invoker__( addr, { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
 
         } catch( err ) {
 
-            ${2}._nodepp_invoke_( "${0}", { type: 0, data: err.message });
+            Module.__invoker__( addr, { type: 0, data: err.message });
 
-        }} )() ), addr, obj->pc.as_handle(), NODEPP_MODULE_NAME );
+        }})(); ), addr, self->obj->pc.as_handle(), tmp1, tmp2, obj->agent.peer_id, self->obj->addr );
 
     }); }
 
     /*─······································································─*/
 
     promise_t<string_t,except_t> accept_offer( string_t peer_sdp ) const noexcept {
+           auto self = type::bind( this );
     return promise_t<string_t,except_t>([=](
            res_t<string_t> res, rej_t<except_t> rej
     ){
 
-        if( !is_available() ){ rej( "webrtc closed" ); return; } 
-        auto self = type::bind( this );
+        if( self->is_state( STATE::FS_STATE_KILL ) ){ rej( "webrtc closed" ); return; } 
 
         auto addr = process::invoke([=]( any_t raw ){
         auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
@@ -207,34 +275,40 @@ public:
             case  1: res( value["data"].as<EM_STRING>().c_str() ); break;
         } return -1; });
 
-        EM_EVAL( _STRING_( ( async function(){
-        try {
+        auto tmp = json::stringify( object_t({
+        { "iceRestart", obj->agent.ice_restart } }) );
 
-            const pc = emval_handles[${1}];
+        EM_EVAL( _STRING_(( async ()=>{
 
-            await pc.setRemoteDescription({ type: "offer", sdp: "${3}" });
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription( answer );
+            const addr = "${0}"; 
+        
+        try{
             
-            ${2}._nodepp_invoke_( "${0}", { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
+            const pc = Module.__handle__ ( ${1} );
+            await pc.setRemoteDescription( JSON.parse(atob("${2}")) );
+
+            const an = await pc.createAnswer(${3});
+            await pc.setLocalDescription    ( an );
+            
+            Module.__invoker__( addr, { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
 
         } catch( err ) {
 
-            ${2}._nodepp_invoke_( "${0}", { type: 0, data: err.message });
+            Module.__invoker__( addr, { type: 0, data: err.message });
 
-        }} )() ), addr, obj->pc.as_handle(), NODEPP_MODULE_NAME, peer_sdp );
+        }})(); ), addr, self->obj->pc.as_handle(), peer_sdp, tmp );
 
     }); }
 
     /*─······································································─*/
 
     promise_t<string_t,except_t> accept_answer( string_t peer_sdp ) const noexcept {
+           auto self = type::bind( this );
     return promise_t<string_t,except_t>([=](
            res_t<string_t> res, rej_t<except_t> rej
     ){
 
-        if( !is_available() ){ rej( "webrtc closed" ); return; } 
-        auto self = type::bind( this );
+        if( self->is_state( STATE::FS_STATE_KILL ) ){ rej( "webrtc closed" ); return; } 
 
         auto addr = process::invoke([=]( any_t raw ){
         auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
@@ -242,31 +316,42 @@ public:
             case  1: res( value["data"].as<EM_STRING>().c_str() ); break;
         } return -1; });
         
-        EM_EVAL( _STRING_(( async function(){
+        EM_EVAL( _STRING_(( async ()=>{
         try {
 
-            const pc= emval_handles[${1}];
-            await pc.setRemoteDescription({ type: "answer", sdp: "${3}" });
+            const pc= Module.__handle__( ${1} );
+            await pc.setRemoteDescription( JSON.parse(atob("${2}")) );
 
-            ${2}._nodepp_invoke_( "${0}", { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
+            Module.__invoker__( "${0}", { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
 
         } catch( err ) {
             
-            ${2}._nodepp_invoke_( "${0}", { type: 0, data: err.message } );
+            Module.__invoker__( "${0}", { type: 0, data: err.message } );
 
-        }})() ), addr, obj->pc.as_handle(), NODEPP_MODULE_NAME, peer_sdp );
+        }})(); ), addr, self->obj->pc.as_handle(), peer_sdp );
 
     }); }
 
     /*─······································································─*/
 
-    promise_t<webrtc_t,except_t> append_ice_candidate( object_t candidate ) const noexcept { 
+    int clear_ice_candidate() const noexcept { 
+
+        if( !is_available() ){ return -1; } 
+
+        EM_EVAL( _STRING_(( async ()=>{
+        Module.__handle__( ${0} );.restartIce(); })(); ), obj->pc.as_handle() );
+
+    return 1; }
+
+    /*─······································································─*/
+
+    promise_t<webrtc_t,except_t> append_ice_candidate( string_t candidate ) const noexcept { 
+           auto self = type::bind( this );
     return promise_t<webrtc_t,except_t> ([=](
            res_t<webrtc_t> res, rej_t<except_t> rej
     ){
 
-        if( !is_available() ){ rej( "webrtc closed" ); return; } 
-        auto self = type::bind( this );
+        if( self->is_state( STATE::FS_STATE_KILL ) ){ rej( "webrtc closed" ); return; } 
 
         auto addr = process::invoke([=]( any_t raw ){
         auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
@@ -274,19 +359,19 @@ public:
             case  1: res( *self ); /*---------------------------*/ break;
         } return -1; });
         
-        EM_EVAL( _STRING_(( async function(){
+        EM_EVAL( _STRING_(( async ()=>{
         try {
 
-            const pc  = emval_handles[${1}];
-            await pc.addIceCandidate( ${2} );
+            const pc  = Module.__handle__( ${1} );
+            await pc.addIceCandidate( JSON.parse( atob("${2}") ) );
 
-            ${3}._nodepp_invoke_( "${0}", { type: 1 } );
+            Module.__invoker__( "${0}", { type: 1 } );
 
         } catch( err ) {
             
-            ${3}._nodepp_invoke_( "${0}", { type: 0, data: err.message } );
+            Module.__invoker__( "${0}", { type: 0, data: err.message } );
 
-        }})() ), addr, obj->pc.as_handle(), json::stringify( candidate ), NODEPP_MODULE_NAME );
+        }})(); ), addr, self->obj->pc.as_handle(), candidate );
 
     });}
 

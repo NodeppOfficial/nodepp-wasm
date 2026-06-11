@@ -23,16 +23,18 @@ protected:
 
     void set_state( uchar value ) const noexcept {
     if( obj->state & STATE::FS_STATE_KILL ){ return; }
-        obj->fd.call<EM_VAL>( "close" );
         obj->state = value;
     }
 
     enum STATE {
          FS_STATE_UNKNOWN = 0b00000000,
          FS_STATE_OPEN    = 0b00000001,
+         FS_STATE_REUSE   = 0b01000001,
          FS_STATE_CLOSE   = 0b00000010,
+         FS_STATE_READING = 0b00010000,
+         FS_STATE_WRITING = 0b00100000,
          FS_STATE_KILL    = 0b00000100,
-         FS_STATE_REUSE   = 0b00001000,
+         FS_STATE_STOP    = 0b00001000,
          FS_STATE_DISABLE = 0b00001110
     };
 
@@ -40,13 +42,14 @@ protected:
 
     struct NODE {
         char state= STATE::FS_STATE_CLOSE; 
-        EM_VAL   fd ; uchar64 pd ;
-        uchar64 addr; uchar64 tag;
+        EM_VAL    fd ; uchar_64 pd ;
+        uchar_64 addr; uchar_64 tag;
     };  ptr_t<NODE> obj;
 
     void kill() const noexcept {
-        set_state( STATE::FS_STATE_KILL );
-        process::revoke( obj->addr );
+        if( !obj->fd.isUndefined() ) { obj->fd.call<EM_VAL>( "close" ); }
+        process::revoke( obj->addr ); set_state( STATE::FS_STATE_KILL ); 
+        obj->fd = EM_VAL::undefined();
     }
 
 public: ws_t() noexcept : obj( new NODE() ){}
@@ -70,78 +73,76 @@ public: ws_t() noexcept : obj( new NODE() ){}
         auto self = type::bind( this );
 
         obj->addr = process::invoke([=]( any_t raw ){
-        auto value= raw.as<EM_VAL>(); krn->wake();
+        auto value= raw.as<EM_VAL>(); krn->wake(); switch( value["type"].as<int>() ){
 
-            switch( value["type"].as<int>() ){
+            case 3: self->onError.emit( value["data"].as<EM_STRING>().c_str() ); 
+            case 2: self->free(); return -1; break; 
 
-                case 3: self->onError.emit( value["data"].as<EM_STRING>().c_str() ); 
-                case 2: self->free(); break; 
-                
-                case 0: do {
-
-                    self->obj->state = STATE::FS_STATE_OPEN;
+            case 4: self->obj->state = STATE::FS_STATE_OPEN;
                     self->obj->fd    = value[ "data" ];
-                    self->onOpen   .emit(*self); 
+            return 1; break;
+
+            case 0: self->onOpen   .emit(*self); 
                     self->onConnect.emit(*self);
-
-                } while(0); return 1; break;
+            return 1; break;
                 
-                case 1: do {
+            case 1: do {
+                auto raw = value["data"].as<EM_STRING>(); 
+                string_t buffer ( raw.c_str(), raw.length() );
+                self->onData.emit( buffer ); 
+            } while(0); return 1; break;
 
-                    auto raw = value["data"].as<EM_STRING>(); 
-                    string_t buffer ( raw.c_str(), raw.length() );
-                    self->onData.emit( buffer ); 
+        }   return -1; });
 
-                } while(0); return 1; break;
-
-            }
-
-        return -1; });
-
-        EM_EVAL( _STRING_(( function(){
+        EM_EVAL( _STRING_( 
+            const addr= "${1}"; 
+        try{const cli = new WebSocket( "${0}" );
             
-            const cli = new WebSocket( "${0}" ); const addr= "${2}"; 
-                  cli.binaryType= "arraybuffer";
+            cli.binaryType= "arraybuffer";
 
-            cli.onclose = (e) => {
-                ${1}._nodepp_invoke_( addr, { type: 2 } );
-            };
+            cli.onclose   = (e) => { Module.__invoker__( addr, { type: 2 } ); };
+            cli.onopen    = (e) => { Module.__invoker__( addr, { type: 0 } ); };
+            cli.onmessage = (e) => { Module.__invoker__( addr, { type: 1, data: e.data } ); };
+            cli.onerror   = (e) => { Module.__invoker__( addr, { type: 3, data: "could not connect to the server" } ); };
 
-            cli.onopen  = (e) => {
-                ${1}._nodepp_invoke_( addr, { type: 0, data: cli } );
-            };
+            /*--------------------*/ Module.__invoker__( addr, { type: 4, data: cli } );
 
-            cli.onmessage = (e) => {
-                ${1}._nodepp_invoke_( addr, { type: 1, data: e.data } );
-            };
-
-            cli.onerror = (e) => {
-                ${1}._nodepp_invoke_( addr, { type: 3, data: "could not connect to the server" } );
-            };
-
-        })(); ), url, NODEPP_MODULE_NAME, obj->addr );
+        } catch(e) {
+            Module.__invoker__( addr, { type: 3, data: "could not connect to the server" } ); 
+        }), url, obj->addr );
 
     }
 
     /*─······································································─*/
 
-    void free() const noexcept { if( !is_available() ){ return; } 
-        onDrain.emit(); kill(); onClose.emit();
-        onConnect.clear(); onError.clear();
-        onData   .clear(); onClose.clear();
+    void free() const noexcept {
+
+        if( is_state( STATE::FS_STATE_KILL  ) ){ return; } kill();
+        if(!is_state( STATE::FS_STATE_CLOSE ) ){ onDrain .emit (); }
+       
+        onClose.emit ();
+
+        onError.clear(); onConnect.clear();
+        onClose.clear(); onData   .clear();
+
     }
 
-    void close() const noexcept { if( !is_available() ){ return; }
-         onDrain.emit(); free();
-    }
+    void close() const noexcept {
+        if( is_state ( STATE::FS_STATE_DISABLE ) ){ return; } onDrain.emit(); 
+            set_state( STATE::FS_STATE_CLOSE   );
+    free(); }
 
     /*─······································································─*/
 
     bool    is_closed() const noexcept { return  is_state ( STATE::FS_STATE_DISABLE ) || obj->state == 0x00; }
-    bool is_available() const noexcept { return !is_closed()  ; }
-    int        get_fd() const noexcept { return (int)&obj->fd ; }
-    uchar64&   get_pd() const noexcept { return /*-*/ obj->pd ; }
-    uchar64&      tag() const noexcept { return /*-*/ obj->tag; }
+    bool is_available() const noexcept { return !is_closed(); }
+    void set_reusable() const noexcept { obj->state |= STATE::FS_STATE_REUSE; }
+
+    /*─······································································─*/
+
+    uchar_64   get_fd() const noexcept { return (uchar_64) obj->fd.as_handle(); }
+    uchar_64&  get_pd() const noexcept { return obj->pd ; }
+    uchar_64&     tag() const noexcept { return obj->tag; }
 
     /*─······································································─*/
 

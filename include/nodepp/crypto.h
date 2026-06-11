@@ -16,6 +16,13 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#define NODEPP_CRYPTO_INITIALIZATOR()  /*unused*/
+#define MBEDTLS_PLATFORM_MEMORY
+#define MBEDTLS_PLATFORM_CALLOC_MACRO  NODEPP_ALLOC().calloc
+#define MBEDTLS_PLATFORM_FREE_MACRO    NODEPP_ALLOC().free
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include "encoder.h"
 #include "fs.h"
 
@@ -30,6 +37,7 @@
 #include <mbedtls/bignum.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/platform.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -56,6 +64,7 @@ protected:
 public:
 
     hash_t( mbedtls_md_type_t type, ulong output_length ) : obj( new NODE() ) { 
+    NODEPP_CRYPTO_INITIALIZATOR();
         
         obj->bff    = ptr_t<uchar>( output_length );
         obj->length = output_length;
@@ -119,6 +128,8 @@ public:
 
     template< class T >
     hmac_t( const string_t& key, const T& type, ulong length ) : obj( new NODE() ) { 
+    NODEPP_CRYPTO_INITIALIZATOR();
+
         if( key.empty() ){ NODEPP_THROW_ERROR("can't initializate hmac_t"); }
 
         obj->bff    = ptr_t<uchar>( length ); 
@@ -177,8 +188,10 @@ public:
     event_t<string_t> onData;
 
     xor_t( const string_t& key ) : obj( new NODE() ) {
+    NODEPP_CRYPTO_INITIALIZATOR();
+    
         if( key.empty() ){ NODEPP_THROW_ERROR("can't initializate xor_t"); }
-
+    
         CTX item1; //memset( &item1, 0, sizeof(CTX) );
             item1.key  = key; item1.pos = 0;
             obj->state = 1;
@@ -186,19 +199,20 @@ public:
         obj->ctx = ptr_t<CTX> ({ item1 });
     }
 
-    xor_t() noexcept : obj( new NODE() ) { obj->state = 0; }
+    xor_t() noexcept : obj( new NODE() ) {
+        NODEPP_CRYPTO_INITIALIZATOR(); obj->state = 0; 
+    }
     
    ~xor_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
     void update( string_t msg ) const noexcept { 
-        if( !obj->state ){ return; } ulong chunk=0, /*-------------*/ base=NODEPP_CHUNK_SIZE;
-        while( chunk < msg.size() ){ string_t tmp = msg.slice_view( chunk, chunk + base );
-            forEach( y, obj->ctx ){ forEach( x, tmp ){ 
-                x = x ^ y.key[ y.pos % y.key.size() ]; ++y.pos; 
-            }} if ( tmp.empty() )     { return; }
-             elif ( onData.empty() )  { obj->bff +=tmp; }
-             else { onData.emit(tmp); }
-        chunk += base; }
+        if( !obj->state ){ return; } ulong chunk=0, /*-----*/ base=NODEPP_CHUNK_SIZE;
+        while( chunk < msg.size() ){ string_t tmp = msg.slice( chunk, chunk + base );
+        forEach( x, tmp ){ CTX &y = obj->ctx[0];
+            x = x ^ y.key[ y.pos % y.key.size() ]; ++y.pos; 
+        }  if ( tmp   .empty() )  { return; }
+         elif ( onData.empty() )  { obj->bff +=tmp; }
+         else { onData.emit(tmp); } chunk += base ; }
     }
 
     bool is_available() const noexcept { return obj->state == 1; }
@@ -267,11 +281,11 @@ public:
     event_t<>         onClose;
 
     encrypt_t( const string_t& iv, const string_t& key, mbedtls_cipher_type_t type ) : obj( new NODE() ) { 
-        _init_(type, key, iv);
+        NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, iv);
     }
 
-    encrypt_t( const string_t& key, mbedtls_cipher_type_t type ) : obj( new NODE() ) { 
-        _init_(type, key, nullptr); 
+    encrypt_t( const string_t& key, mbedtls_cipher_type_t type ) : obj( new NODE() ) {     
+        NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, nullptr); 
     }
 
    ~encrypt_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
@@ -361,12 +375,12 @@ public:
 
     template< class T >
     decrypt_t( const string_t& key, const T& type ) : obj( new NODE() ) { 
-        _init_(type, key, nullptr); 
+        NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, nullptr); 
     }
 
     template< class T >
     decrypt_t( const string_t& iv, const string_t& key, const T& type ) : obj( new NODE() ) { 
-        _init_(type, key, iv);
+        NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, iv);
     }
 
    ~decrypt_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
@@ -443,7 +457,8 @@ public:
     event_t<string_t> onData;
     event_t<>         onClose;
 
-    encoder_t(const string_t& chr) : obj(0UL, NODE()) { 
+    encoder_t(const string_t& chr) : obj( new NODE() ) { 
+    NODEPP_CRYPTO_INITIALIZATOR();
         obj->state = 1; obj->chr = chr;
     }
     
@@ -525,7 +540,8 @@ public:
     event_t<string_t> onData;
     event_t<>         onClose;
 
-    decoder_t(const string_t& chr) : obj(0UL, NODE()) { 
+    decoder_t(const string_t& chr) : obj( new NODE() ) { 
+    NODEPP_CRYPTO_INITIALIZATOR();
         obj->state = 1; obj->chr = chr;
     }
     
@@ -580,6 +596,8 @@ public:
    ~base64_encoder_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
     base64_encoder_t() noexcept : obj( new NODE() ) {
+    NODEPP_CRYPTO_INITIALIZATOR();
+
         obj->state = 1; obj->bff = ptr_t<char>( NODEPP_CHUNK_SIZE, '\0' );
 
         CTX item1; memset( &item1, 0, sizeof(CTX) );
@@ -596,7 +614,7 @@ public:
         ulong base = obj->bff.size();
         
         while( chunk < msg.size() ) { 
-            string_t tmp = msg.slice_view( chunk, chunk + base );
+            string_t tmp = msg.slice( chunk, chunk + base );
             obj->ctx->len = 0; 
         for  ( auto &x: tmp ) {
                 
@@ -673,6 +691,8 @@ public:
    ~base64_decoder_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
     base64_decoder_t() noexcept : obj( new NODE() ) {
+    NODEPP_CRYPTO_INITIALIZATOR();
+
         obj->state = 1; obj->bff = ptr_t<char>( NODEPP_CHUNK_SIZE, '\0' );
 
         CTX item1; memset( &item1, 0, sizeof(CTX) );
@@ -684,7 +704,7 @@ public:
 
     void update( string_t msg ) const noexcept { 
         if( !obj->state ){ return; } ulong chunk=0, /*--------*/ base=obj->bff.size();
-        while( chunk < msg.size() ){ string_t tmp = msg.slice_view( chunk, chunk + base );
+        while( chunk < msg.size() ){ string_t tmp = msg.slice( chunk, chunk + base );
         for  ( int x=0; x<64; x++ ){ obj->ctx->T[type::cast<int>(CRYPTO_BASE64[x])] =x; }
 
             string_t out; obj->ctx->len = 0; forEach ( x, tmp ) {
@@ -761,7 +781,8 @@ protected:
 
 public:
 
-    rsa_t() : obj(0UL, NODE()) {
+    rsa_t() : obj( new NODE() ) {
+    NODEPP_CRYPTO_INITIALIZATOR();
         if( mbedtls_ctr_drbg_seed(&obj->ctr_drbg, mbedtls_entropy_func, &obj->entropy, 
                                   (const uchar*)"rsa_t", 5)  !=0
         ) { NODEPP_THROW_ERROR("failed to seed RNG"); } obj->state=1;
@@ -833,7 +854,7 @@ public:
 
         while( chunk < msg.size() ) { 
             
-            string_t tmp = msg.slice_view( chunk, chunk_size );
+            string_t tmp = msg.slice( chunk, chunk_size );
 
             if( mbedtls_pk_encrypt(&obj->pk, (const uchar*)tmp.data(), tmp.size(),
                                     obj->bff.get(), &out_len, obj->bff.size(),
@@ -906,6 +927,8 @@ public:
 
     template< class T >
     ec_t( const string_t& key, const T& type ) noexcept : obj( new NODE() ) {
+    NODEPP_CRYPTO_INITIALIZATOR();
+
         if( key.empty() ){ NODEPP_THROW_ERROR("can't initializate ec_t"); }
 
         if( mbedtls_ecp_group_load(&obj->keypair.grp, type) != 0 ) /*---*/ { return; }
@@ -920,6 +943,8 @@ public:
 
     template< class T >
     ec_t( const T& type ) noexcept : obj( new NODE() ) {
+    NODEPP_CRYPTO_INITIALIZATOR();
+    
         if( mbedtls_ecp_group_load(&obj->keypair.grp, type) != 0 ){ return; }
 
         if( mbedtls_ecp_gen_keypair(&obj->keypair.grp, &obj->keypair.d, 

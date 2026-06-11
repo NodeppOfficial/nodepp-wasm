@@ -9,8 +9,8 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_ARDUINO_FILE
-#define NODEPP_ARDUINO_FILE
+#ifndef NODEPP_EMBEDDED_FILE
+#define NODEPP_EMBEDDED_FILE
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -33,20 +33,23 @@ private:
     enum STATE {
          FS_STATE_UNKNOWN = 0b00000000,
          FS_STATE_OPEN    = 0b00000001,
+         FS_STATE_REUSE   = 0b01000000,
          FS_STATE_CLOSE   = 0b00000010,
          FS_STATE_READING = 0b00010000,
          FS_STATE_WRITING = 0b00100000,
          FS_STATE_KILL    = 0b00000100,
-         FS_STATE_REUSE   = 0b00001000,
+         FS_STATE_STOP    = 0b00001000,
          FS_STATE_DISABLE = 0b00001110
     };
 
 protected:
 
     struct NODE {
-        ulong range[2] ={ 0, 0 };
+
+        ulong range[2] = { 0, 0 };
         FILE* fd       = nullptr;
-        int   feof     = 1;
+        int   feof     = 1; uchar_64 tag= 0UL;
+        /*---------------*/ uchar_64 pd = 0UL;
         uchar state    = STATE::FS_STATE_OPEN;
 
         ptr_t<char> buffer; string_t borrow;
@@ -77,13 +80,13 @@ public:
     file_t( const string_t& path, const string_t& mode, const ulong& _size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) {
             obj->fd = fopen( path.c_str(), mode.c_str() ); 
         if( obj->fd == nullptr ){
-            NODEPP_THROW_ERROR("such file or directory does not exist");
+            NODEPP_THROW_ERROR( "such file or directory does not exist" );
         }   set_buffer_size( _size ); 
     }
 
     file_t( FILE* fd, const ulong& _size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) {
         if( fd == nullptr )
-          { NODEPP_THROW_ERROR("such file or directory does not exist"); }   
+          { NODEPP_THROW_ERROR( "such file or directory does not exist" ); }   
             obj->fd = fd; set_buffer_size( _size ); 
     }
 
@@ -93,30 +96,45 @@ public:
 
     /*─······································································─*/
 
-    bool     is_closed() const noexcept { return is_state(STATE::FS_STATE_DISABLE) || obj->fd==nullptr; }
-    bool       is_feof() const noexcept { return obj->feof <= 0 && obj->feof != -2; }
-    bool    is_waiting() const noexcept { return obj->feof == -2; }
-    bool  is_available() const noexcept { return !is_closed(); }
-
-    /*─······································································─*/
-
-    void  resume() const noexcept { if(is_state(STATE::FS_STATE_OPEN )){ return; } onResume.emit(); set_state(STATE::FS_STATE_OPEN ); }
-    void    stop() const noexcept { if(is_state(STATE::FS_STATE_REUSE)){ return; } onDrain .emit(); set_state(STATE::FS_STATE_REUSE); }
-    void   reset() const noexcept { if(is_state(STATE::FS_STATE_KILL )){ return; } resume(); pos(0); }
+    void  resume() const noexcept { if(!is_state(STATE::FS_STATE_STOP )){ return; } onResume .emit(); obj->state &=~ STATE::FS_STATE_STOP; }
+    void    stop() const noexcept { if( is_state(STATE::FS_STATE_STOP )){ return; } onDrain  .emit(); obj->state |=  STATE::FS_STATE_STOP; }
+    void   reset() const noexcept { if( is_state(STATE::FS_STATE_KILL )){ return; } resume(); pos(0); }
     void   flush() const noexcept { obj->buffer.fill(0); }
 
     /*─······································································─*/
 
+    bool    is_closed() const noexcept { return is_state(STATE::FS_STATE_DISABLE) || obj->fd==nullptr; }
+    bool  is_reusable() const noexcept { return is_state(STATE::FS_STATE_REUSE  ); }
+    bool      is_feof() const noexcept { return obj->feof <= 0 && obj->feof != -2; }
+    bool   is_waiting() const noexcept { return obj->feof == -2; }
+    bool is_available() const noexcept { return !is_closed(); }
+
+    /*─······································································─*/
+
     void close() const noexcept {
-        if( is_state ( STATE::FS_STATE_DISABLE ) ) { return; }
-            onDrain.emit(); set_state( STATE::FS_STATE_CLOSE );
+        if( is_state ( STATE::FS_STATE_DISABLE )){ return; } onDrain.emit(); 
+        if( is_state ( STATE::FS_STATE_REUSE   )){ return; }
+            set_state( STATE::FS_STATE_CLOSE   );
     free(); }
 
     /*─······································································─*/
 
-    void set_range( ulong x, ulong y ) const noexcept { obj->range[0] = x; obj->range[1] = y; }
-    ulong* get_range() const noexcept { return obj == nullptr ? nullptr : obj->range; }
-    int       get_fd() const noexcept { return obj == nullptr ? -1 :(int) obj->fd; }
+    void   set_range( ulong x, ulong y ) const noexcept { obj->range[0] = x; obj->range[1] = y; }
+    ulong* get_range() /*-------------*/ const noexcept { return obj->range; }
+
+    /*─······································································─*/
+
+    void set_reusable( bool mode ) const noexcept { 
+    switch( mode ){
+        case 1 : obj->state |=  STATE::FS_STATE_REUSE; break;
+        default: obj->state &=~ STATE::FS_STATE_REUSE; break;
+    }}
+
+    /*─······································································─*/
+
+    FILE*      get_fd() const noexcept { return obj->fd ; }
+    uchar_64&     tag() const noexcept { return obj->tag; }
+    uchar_64&  get_pd() const noexcept { return obj->pd ; }
 
     /*─······································································─*/
 
@@ -150,10 +168,10 @@ public:
 
     void free() const noexcept {
 
-        if( is_state( STATE::FS_STATE_REUSE ) && !is_feof() && obj.count()>1 ) { return; }
+        if( is_state( STATE::FS_STATE_STOP  ) && !is_feof() && obj.count() >1 ){ return; }
         if( is_state( STATE::FS_STATE_KILL  ) ){ return; } /*-----------------*/ kill();
-        if(!is_state( STATE::FS_STATE_CLOSE | STATE::FS_STATE_REUSE ) ){ onDrain.emit(); }
-       
+        if(!is_state( STATE::FS_STATE_CLOSE | STATE::FS_STATE_STOP ) ) { onDrain.emit(); }
+        
         onClose.emit();
 
         onUnpipe.clear(); onResume.clear();
@@ -165,12 +183,12 @@ public:
 
     /*─······································································─*/
 
+    ulong pos() /*-------*/ const noexcept { return ftell( obj->fd ); }
+
     ulong pos( ulong _pos ) const noexcept {
         fseek( obj->fd, _pos, SEEK_SET ); 
         return pos();
     }
-
-    ulong pos() const noexcept { return ftell( obj->fd ); }
 
     /*─······································································─*/
 
@@ -230,23 +248,23 @@ public:
     /*─······································································─*/
 
     int _write_( char* bf, const ulong& sx, ulong* sy ) const noexcept {
-        if( sx==0 || is_closed() ){ return -1; } while( *sy<sx ) {
-            int c = __write( bf + *sy, sx - *sy );
-            if( c <= 0 && c != -2 ) /*----*/ { return -2; }
-            if( c >  0 ){ *sy+= c; continue; } break/**/;
-        }   return sx;
-    }
+    if( sx==0 || is_closed() ){ return -1; } while( *sy<sx ) {
+        int c = __write( bf + *sy, sx - *sy );
+        if( c==-2 ) /*--*/ { return -2; }
+        if( c > 0 ){ *sy+= c; continue; } 
+    break; } return *sy; }
 
     int _read_( char* bf, const ulong& sx, ulong* sy ) const noexcept {
-        if( sx==0 || is_closed() ){ return -1; } while( *sy<sx ) {
-            int c = __read( bf + *sy, sx - *sy );
-            if( c <= 0 && c != -2 ) /*----*/ { return -2; }
-            if( c >  0 ){ *sy+= c; continue; } break/**/;
-        }   return sx;
-    }
+    if( sx==0 || is_closed() ){ return -1; } while( *sy<sx ) {
+        int c = __read( bf + *sy, sx - *sy );
+        if( c==-2 ) /*--*/ { return -2; }
+        if( c > 0 ){ *sy+= c; continue; } 
+    break; } return *sy; }
 
 };}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

@@ -22,8 +22,8 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace webrtc {
-    inline webrtc_t  client( fetch_webrtc_t* arg ) { return webrtc_t(arg); }
-    inline webrtc_t connect( fetch_webrtc_t* arg ) { return webrtc_t(arg); }
+    inline webrtc_t  client( agent_webrtc_t* arg ) { return webrtc_t(arg); }
+    inline webrtc_t connect( agent_webrtc_t* arg ) { return webrtc_t(arg); }
 }}
 
 /*────────────────────────────────────────────────────────────────────────────*/

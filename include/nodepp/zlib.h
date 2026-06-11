@@ -36,6 +36,12 @@ protected:
          STATE_ZLIB_DEFLATE = 0b00000100,
     };
 
+    static voidpf _malloc_( voidpf opaque, uInt items, uInt size ) {
+    return nodepp::NODEPP_ALLOC().malloc((size_t)items * size); }
+
+    static void _free_ ( voidpf opaque, voidpf address ) {
+    nodepp::NODEPP_ALLOC().free(address); }
+
     struct NODE {
 
         int state = STATE_ZLIB_IDLE; 
@@ -49,8 +55,8 @@ protected:
     };  ptr_t<NODE> obj;
 
     void _init_() const noexcept {
-        obj->fd.zfree    = Z_NULL;
-        obj->fd.zalloc   = Z_NULL;
+        obj->fd.zalloc   = _malloc_;
+        obj->fd.zfree    = _free_  ;
         obj->fd.opaque   = Z_NULL;
         obj->fd.next_in  = Z_NULL;
         obj->fd.avail_in = Z_NULL;
@@ -68,14 +74,14 @@ public:
     event_t<string_t>  onData;
     
     /*─······································································─*/
+    
+   ~zlib_t() noexcept { if( obj.count()>1 || obj->state==0 ){ return; } free(); }
 
     zlib_t( int type=0, ulong size=NODEPP_CHUNK_SIZE ) noexcept : obj( new NODE ) { 
         obj->state= STATE::STATE_ZLIB_OPEN;
         obj->bff  = ptr_t<char>( size ); 
         obj->type = type; _init_(); 
     }
-    
-   ~zlib_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
     /*─······································································─*/
     
