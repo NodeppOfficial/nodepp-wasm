@@ -1,21 +1,11 @@
-if [ ! -d "./www" ]; then
-     mkdir "./www"
-fi
+#!/bin/bash
 
-FLAGS=(
-    -s MODULARIZE=1 -s EXPORT_NAME="Engine"
-    -s FETCH=1 -s WASM=1
-    -s ASYNCIFY=1
-)
+mkdir -p "www"
 
-LIB="-pthread -lwebsocket.js --bind"
-INCLUDE="-I./include"
-FILE="main.cpp"
-
-em++ -o www/index.js $FILE $INCLUDE $LIB "${FLAGS[@]}"
-
-if [ ! $? -eq 0 ]; then
-    echo "exit error"; exit;
-fi
-
-emrun ./www/index.html
+em++ -o ./www/index.html main.cpp -I./include -L./lib \
+    -lmbedtls -lmbedcrypto -lmbedx509 -lembind \
+    -sASYNCIFY=1 -sWASM=1 -sASSERTIONS=0 \
+    -sFORCE_FILESYSTEM=1 -sUSE_ZLIB=1 \
+    -sNO_DISABLE_EXCEPTION_CATCHING
+   
+emrun ./www

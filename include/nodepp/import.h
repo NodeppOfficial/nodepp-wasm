@@ -14,28 +14,44 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include <unistd.h>
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #include <typeinfo>
 #include <cstring>
+#include <cstdint>
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "macros.h"
-#include "type.h"
-#include "atomic.h"
+#ifndef NODEPP_DISABLE_STL_SUPPORT
+#include <string>
+#include <queue>
+#include <array>
+#include <vector>
+#include <functional>
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#include "macros.h"
+#include "task.h"
+#include "type.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#include "allocator.h"
 #include "ptr.h"
-#include "ref.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #include "iterator.h"
 #include "function.h"
 #include "queue.h"
+#include "probe.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -54,12 +70,13 @@
 #include "loop.h"
 #include "signal.h"
 #include "except.h"
+#include "os.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #include "query.h"
-#include "poll.h"
-#include "os.h"
+#include "bind.h"
+#include "kernel.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
