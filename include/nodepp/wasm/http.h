@@ -14,167 +14,142 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include <emscripten/fetch.h>
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
 namespace nodepp { using header_t = map_t< string_t, string_t >; }
-
 namespace nodepp { struct fetch_t {
 
-    string_t  url;
-    string_t  body;
-    string_t  code;
-    uchar     status;
+    string_t  url    ;
+    string_t  body   ;
+    uchar     status ;
     header_t  headers;
-    string_t  filename;
-    ulong     timeout= 0;
+    ulong     timeout= 60000;
     string_t  method = "GET";
 
 };}
 
-namespace nodepp { struct http_t : public fetch_t, public file_t { public:
-
-    http_t( emscripten_fetch_t* args, string_t file, header_t headers ) noexcept : fetch_t({}), file_t(file,"r") {
-        this->code    = args->statusText; this->status  = args->status;
-        this->url     = args->url; /*--*/ this->headers = headers;
-        this->filename= file;
-    }
-
-    virtual ~http_t() noexcept { if( obj.count()>1 ){ return; } ::remove( filename.get() ); }
-
-    http_t() noexcept : fetch_t({}), file_t() {}
-
-};}
-
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace generator { GENERATOR( fetch ) {
-protected:
-
-    struct NODE {
-        rej_t<except_t> rej; res_t<http_t> res;
-        array_t<const char*> hdr;
-        file_t file; fetch_t ctx;
-        string_t filename;
-        bool state =false;
-    }; ptr_t<NODE> obj;
-    
-    /*─······································································─*/
-
-    static void progress( emscripten_fetch_t* args ) {
-        auto data = string_t( args->data, args->numBytes );
-        auto self = type::cast<fetch>( args->userData );
-        /**/ self->obj->file.write( data );
-    }
-    
-    /*─······································································─*/
-
-    static void callback( emscripten_fetch_t* args ) {
-
-        auto self= type::cast<fetch>(args->userData);
-        auto rej = self->obj->rej; header_t headers ;
-        auto res = self->obj->res; self->close();
-
-        if( args->status == 0 ){
-            rej( except_t( "Something Went Wrong" ) );
-            emscripten_fetch_close( args ); return;
-        }   progress( args ); self->obj->file.close();
-
-        string_t raw ( emscripten_fetch_get_response_headers_length( args ), '\0' );
-        emscripten_fetch_get_response_headers( args, raw.get(), raw.size() );
-
-        forEach( x, string::split( raw, '\n' ) ){
-            auto y = x.find( ": " ); if( y == nullptr ){ break; }
-            headers[ x.slice(0,y[0]) ] = x.slice( y[1], -2 );
-        }   
-        
-        http_t out( args, self->obj->filename, headers );
-        emscripten_fetch_close( args ); res( out ); 
-
-    }
-
+namespace nodepp { class http_t : public stream_t { 
 public:
 
-    fetch( fetch_t ctx ) : obj( new NODE() ) {
-        if( !url::is_valid( ctx.url ) ){ throw except_t("invalid URL"); }
-        obj->state = true; obj->ctx = ctx;
-    }
+    uint      status = 200;
+    string_t  version;
+    header_t  headers;
 
-    fetch() : obj( new NODE() ) { obj->state = false; }
-
-    virtual ~fetch() noexcept {}
+    string_t  body  ;
+    string_t  search;
+    string_t  method;
+    string_t  path  ;
     
     /*─······································································─*/
 
-    coEmit(){
-    coBegin
+    http_t( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) : stream_t( fd, EM_VAL::undefined(), size ) {} 
 
-        do{ emscripten_fetch_attr_t attr; emscripten_fetch_attr_init( &attr );
-            memcpy( attr.requestMethod, obj->ctx.method.get(), obj->ctx.method.size() );
-    
-            if ( obj->ctx.timeout != 0 ){ attr.timeoutMSecs = obj->ctx.timeout; }
-            for( auto& x: obj->ctx.headers.data() ){
-                 obj->hdr.push( x.first.c_str()  );
-                 obj->hdr.push( x.second.c_str() );
-            }    obj->hdr.push( nullptr );
+    http_t() : stream_t() {}
 
-            obj->filename       = regex::format( "tmp_${0}_${1}", rand(), process::now() );
-            obj->file           = file_t( obj->filename, "w" );
-    
-            attr.attributes     = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-            //                  | EMSCRIPTEN_FETCH_STREAM_DATA;
-
-            attr.userData       = type::cast<void>( this );
-            attr.requestHeaders = (char**) obj->hdr.data();
-            attr.requestDataSize= obj->ctx.body.size();
-            attr.requestData    = obj->ctx.body.get();
-            attr.onprogress     = progress;
-            attr.onsuccess      = callback;
-            attr.onerror        = callback;
-    
-            emscripten_fetch( &attr, obj->ctx.url.get() );
-
-        } while(0); coWait( is_closed()==false );
-
-    coFinish
-    }
-    
     /*─······································································─*/
 
-    void set_rejected_callback( rej_t<except_t> callback ) const noexcept {
-         obj->rej = callback;
-    }
+    promise_t<http_t,except_t> read_body( ulong timeout=60000UL ) const noexcept {
 
-    void set_resolved_callback( res_t<http_t> callback ) const noexcept {
-         obj->res = callback;
-    }
-    
-    /*─······································································─*/
+        auto self = type::bind( this ); set_timeout( timeout );
 
-    bool is_closed() const noexcept { return obj->state==false; }
+    return promise_t<http_t,except_t> ([=](
+        res_t<http_t> res, rej_t<except_t> rej
+    ){
+        
+        auto task = self->onDrain.once([&self,res](){ res( *self ); });
 
-    void     close() const noexcept {        obj->state =false; }
+        process::poll( *self, POLL_STATE::READ | POLL_STATE::EDGE, coroutine::add( COROUTINE(){
+            int c=0;
+        coBegin
 
-};}}
+            while ( self->is_available() ){
+            coWait((c=self->__read( self->get_buffer_data(), self->get_buffer_size() ))==-2 );
+                if( c<0 ){ break; } self->body += string_t ( self->get_buffer().slice(0,c) );
+            }
+            
+            self->onDrain.off(task); res( *self ); 
+
+        coFinish
+        }), 0UL );
+
+    }); }
+
+};}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace http {
 
     inline promise_t<http_t,except_t> fetch( const fetch_t& fetch ) {
-    return promise_t<http_t,except_t>([=]( res_t<http_t> res, rej_t<except_t> rej ){
+    return promise_t<http_t,except_t>([=]( 
+           res_t<http_t> res, rej_t<except_t> rej 
+    ){
 
         if( !url::is_valid( fetch.url ) ){ rej(except_t("invalid URL")); return; }
 
-        auto task = type::bind( new generator::fetch( fetch ) );
-             task->set_resolved_callback( res );
-             task->set_rejected_callback( rej );
+        auto addr = process::invoke([=]( any_t raw ){ do { 
+        auto value= raw.as<EM_VAL>();
 
-        process::foop( task );
+            if( value["type"].as<int>() == 0 ){ 
+                rej( value["data"].as<EM_STRING>().c_str() ); 
+            break; }
+
+            auto keys = EM_GET("Object").call<EM_VAL>( "keys", value["headers"] );
+            int  len  = keys ["length"].as<int>(); header_t hdrs;
+            auto tmp  = value["headers"];
+
+            for( int i=0; i<len; i++ ) {
+                 EM_STRING key = keys[i] .as<EM_STRING>();
+                 EM_STRING val = tmp[key].as<EM_STRING>();
+                 hdrs[ key.c_str() ] = val.c_str();
+            }
+
+            auto uri  = value["url"]   .as<EM_STRING>();
+            auto stte = value["status"].as<int>();
+
+            http_t cli( value["data"] ); 
+                   cli.status  = stte;
+                   cli.headers = hdrs;
+                   cli.search  = url::search( uri );
+                   cli.path    = url::path  ( uri );
+                   cli.set_timeout( fetch.timeout );
+
+            res( cli );
+
+        } while(0); return -1; });
+
+        string_t obj = "{", hdr = json::stringify( fetch.headers );
+        if( !fetch.body   .empty() ){ obj += regex::format( "body:   \"${0}\",", fetch.body    ); }
+        if( !fetch.method .empty() ){ obj += regex::format( "method: \"${0}\",", fetch.method  ); }
+        if(  fetch.timeout > 0     ){ obj += regex::format( "timeout:\"${0}\",", fetch.timeout ); }
+        if( !fetch.headers.empty() ){ obj += regex::format( "headers:  ${0}  ,", hdr           ); }
+        obj += "}";
+
+        EM_EVAL( NODEPP_STRINGIFY ( fetch( "${0}", ${1} )
+
+            .then( res => { const headerObj = {};
+
+                res.headers.forEach( (value, key) => {
+                    headerObj[key] = value;
+                });
+
+                Module.__invoke__("${2}", {
+                    type   : 1          , 
+                    headers: res.headers,
+                    url    : res.url    ,
+                    status : res.status ,
+                    data   : res.body   , 
+                });
+                
+            })
+
+            .catch( err => {  Module.__invoke__( "${2}", {
+                type: 0, data: err.message 
+            }); });
+
+        ), fetch.url, obj, addr );
 
     }); }
-
 
 }}
 

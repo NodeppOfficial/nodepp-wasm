@@ -9,8 +9,8 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_WASM_ATOMIC
-#define NODEPP_WASM_ATOMIC
+#ifndef NODEPP_POSIX_ATOMIC
+#define NODEPP_POSIX_ATOMIC
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -18,46 +18,13 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace atomic { 
-
-    template< class T > struct is_atomic           : type::false_type{};
-
-    template<>          struct is_atomic<int>      : type::true_type {};
-    template<>          struct is_atomic<uint>     : type::true_type {};
-    template<>          struct is_atomic<bool>     : type::true_type {};
-    template<>          struct is_atomic<char>     : type::true_type {};
-    template<>          struct is_atomic<long>     : type::true_type {};
-    template<>          struct is_atomic<short>    : type::true_type {};
-    template<>          struct is_atomic<uchar>    : type::true_type {};
-    template<>          struct is_atomic<llong>    : type::true_type {};
-    template<>          struct is_atomic<ulong>    : type::true_type {};
-    template<>          struct is_atomic<ushort>   : type::true_type {};
-    template<>          struct is_atomic<ullong>   : type::true_type {};
-
-//  template<>          struct is_atomic<float>    : type::true_type {};
-//  template<>          struct is_atomic<double>   : type::true_type {};
-
-    template<>          struct is_atomic<wchar_t>  : type::true_type {};
-    template<>          struct is_atomic<char16_t> : type::true_type {};
-    template<>          struct is_atomic<char32_t> : type::true_type {};
-
-    template< class T > struct is_atomic<T*>       : type::true_type{};
-
-}}
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
 namespace nodepp { 
-template< class T, class = typename type::enable_if<atomic::is_atomic<T>::value,T>::type >
+template< class T, class = typename type::enable_if<type::is_trivially_copyable<T>::value,T>::type >
 class atomic_t   { private: T value; protected: 
 
-    void cpy( const atomic_t& other ) noexcept { 
-         memcpy( &value, &other.value, sizeof( T ) );
-    }
+    void cpy( const atomic_t& other ) noexcept { memcpy ( &value, &other.value, sizeof( T ) ); }
 
-    void mve( atomic_t&& other )      noexcept { 
-         memmove( &value, &other.value, sizeof( T ) );
-    }
+    void mve( atomic_t&& other ) /**/ noexcept { memmove( &value, &other.value, sizeof( T ) ); }
 
 public:
 
@@ -173,6 +140,92 @@ public:
     explicit operator T() /**/ const noexcept { return get(); }
 
 }; }
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace atomic {
+
+    inline void acquire(){ __atomic_thread_fence( __ATOMIC_ACQUIRE ); }
+    inline void release(){ __atomic_thread_fence( __ATOMIC_RELEASE ); }
+    
+    template< class T, class... V >
+    void fence( const T& callback, V... args ){
+        acquire(); callback( args... );
+        release();
+    }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { template< class T > class atomic_ptr_t {
+private:
+
+    struct NODE {
+        T* value = nullptr; atomic_t<ulong> count;
+        /*---------------*/ ulong size=0;
+    };  NODE* obj= nullptr;
+
+    void release() noexcept {
+        if( obj == nullptr ) /**/ { return ; }
+        if( obj->count.sub(1)==1 ){ 
+        if( obj->value ){ delete obj->value; }
+            delete obj; 
+        }   obj = nullptr;
+    }
+
+    void cpy( const atomic_ptr_t& other ) noexcept { release();
+        if( other.null() )/**/{ return; }
+        obj=other.obj; obj->count.add(1);
+    }
+
+    void mve( atomic_ptr_t&& other ) noexcept { release();
+        if( other.null() )/**/{ return; }
+        obj=other.obj; other.obj=nullptr;
+    }
+
+public: 
+
+    atomic_ptr_t( T* value ) : obj( new NODE() ){
+        obj->value = value ; obj->size=0;
+        obj->count.set(1UL);
+    }
+    
+    atomic_ptr_t() noexcept {}
+
+   ~atomic_ptr_t() noexcept { release(); }
+
+    /*─······································································─*/
+
+    atomic_ptr_t( atomic_ptr_t&& other ) noexcept : obj(nullptr) { mve( type::move( other ) ); }
+    atomic_ptr_t& operator=( atomic_ptr_t&& other ) noexcept { 
+        mve( type::move( other ) ); return *this; 
+    }
+    
+    /*─······································································─*/
+
+    atomic_ptr_t( const atomic_ptr_t&  other ) noexcept : obj(nullptr) { cpy( other ); }
+    atomic_ptr_t& operator=( const atomic_ptr_t& other ) noexcept { 
+        cpy( other ); return *this; 
+    }
+
+    /*─······································································─*/
+
+    ulong count() const noexcept { return(obj==nullptr) ? 0UL : obj->count.get(); }
+    bool  null () const noexcept { return obj==nullptr; }
+
+    /*─······································································─*/
+
+    T* operator->() const noexcept { return  data(); }
+    T* operator& () const noexcept { return  data(); }
+    T& operator* () const noexcept { return *data(); }
+    
+    /*─······································································─*/
+
+    T* get () const noexcept { return (obj==nullptr) ? nullptr : obj->value; }
+    T* data() const noexcept { return (obj==nullptr) ? nullptr : obj->value; }
+
+};}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
