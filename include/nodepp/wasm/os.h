@@ -21,15 +21,39 @@
 
 namespace nodepp { namespace os {
 
-    inline void exec( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+    template< class... T >
+    inline EM_VAL exec( string_t cmd, T... args ){ return EM_EVAL( cmd, args... ); }
 
-    inline void call( string_t cmd ){ ::emscripten_run_script( cmd.get() ); }
+    template< class... T >
+    inline EM_VAL call( string_t cmd, T... args ){ return EM_EVAL( cmd, args... ); }
+
+    /*.........................................................................*/
+
+    inline string_t create_url_object( string_t data ) {
+        if( data.empty() ){ return nullptr; }
+        return string_t( call( NODEPP_STRINGIFY(
+            var tm = decodeURIComponent( escape(window.atob( '${0}' )) );
+            return URL.createObjectURL ( new Blob([ tm ]) );
+        ), encoder::base64::atob ( data ) ).as<EM_STRING>() );
+    }
+
+    inline void remove_url_object( string_t data ) {
+    if( !data.empty() ){ call( NODEPP_STRINGIFY(
+        return URL.revokeObjectURL( "${0}" );
+    ), data ); }}
+
+    /*.........................................................................*/
+
+    inline string_t resolve_origin( string_t path ) {
+    return string_t( call( "return window.origin" ).as<EM_STRING>() ) + path; }
 
     /*─······································································─*/
     
     inline string_t tmp(){ return "/tmp"; }
 
     inline string_t cwd(){ return "/"; }
+
+    inline uint    cpus(){ return 1; }
 
     /*─······································································─*/
 

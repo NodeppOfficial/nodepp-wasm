@@ -14,14 +14,13 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "wasm/atomic.h"
+#if !defined( NODEPP_THREAD_SUPPORTED )
+    #error "This OS Does not support atomic.h"
+#endif
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp {
-    atomic_t<bool> _EXIT_( false  );
-    atomic_t<int>  _TASK_( int(0) );
-}
+#include "wasm/atomic.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
