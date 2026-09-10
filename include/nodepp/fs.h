@@ -16,6 +16,7 @@
 
 #include "path.h"
 #include "stream.h"
+#include "promise.h"
 #include "wasm/fs.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/

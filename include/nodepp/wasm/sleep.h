@@ -20,21 +20,32 @@
 
 namespace nodepp { namespace process {
 
-    inline ulong get_new_timeval() { char res [32];
+    inline uchar_64 start_sleep_machine() { return emscripten_get_now() * 1000; }
 
-        auto size = EM_ASM_INT({
-            let data = Date.now() + ""; /*-----------------*/
-            stringToUTF8( data, $0, $1 ); return data.length;
-        }, res, 32 );
+    inline uchar_64 get_time_interval(){ 
+    thread_local static uchar_64 borrow   = start_sleep_machine();
+    thread_local static uchar_64 stamp    = 0;
+    /*---------------*/ uchar_64 interval = start_sleep_machine();
 
-        return string::to_ullong( string_t( res, size ) );
-    }
+        if( borrow > interval ){
 
-    inline ulong  micros(){ return get_new_timeval() / 1000000; }
+            stamp += interval + ( (uchar_64)-1 ) - borrow;
+            borrow = interval ;
 
-    inline ulong seconds(){ return get_new_timeval() / 1000; }
+        } else {
+            
+            stamp += interval - borrow;
+            borrow = interval ;
 
-    inline ulong  millis(){ return get_new_timeval(); }
+        }
+        
+    return stamp; }
+
+    inline uchar_64  micros(){ return get_time_interval(); }
+
+    inline uchar_64  millis(){ return get_time_interval() / 1000; }
+
+    inline uchar_64 seconds(){ return get_time_interval() / 1000000; }
 
 }}
 
@@ -44,10 +55,10 @@ namespace nodepp { namespace process {
 
     inline void delay( ulong time ){ emscripten_sleep( time ); }
 
-    inline void yield(){ emscripten_sleep(TIMEOUT); }
+    inline uchar_64 now(){ return millis(); }
 
-    inline ulong now(){ return millis(); }
-
+    inline void yield(){ delay(1); }
+    
 }}
 
 /*────────────────────────────────────────────────────────────────────────────*/
