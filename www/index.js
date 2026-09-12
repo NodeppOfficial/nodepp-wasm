@@ -29,7 +29,7 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /tmp/tmpezhz20ki.js
+// include: /tmp/tmpizb3rp27.js
 
   if (!Module['expectedDataFileDownloads']) Module['expectedDataFileDownloads'] = 0;
   Module['expectedDataFileDownloads']++;
@@ -158,11 +158,11 @@ Module['FS_createPath']("/", "www", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/www/index.data", "start": 0, "end": 0}, {"filename": "/www/index.html", "start": 0, "end": 21935}, {"filename": "/www/index.js", "start": 21935, "end": 164131}, {"filename": "/www/index.wasm", "start": 164131, "end": 968355}], "remote_package_size": 968355});
+    loadPackage({"files": [{"filename": "/www/index.data", "start": 0, "end": 0}, {"filename": "/www/index.html", "start": 0, "end": 21935}, {"filename": "/www/index.js", "start": 21935, "end": 168460}, {"filename": "/www/index.wasm", "start": 168460, "end": 1190064}], "remote_package_size": 1190064});
 
   })();
 
-// end include: /tmp/tmpezhz20ki.js
+// end include: /tmp/tmpizb3rp27.js
 
 
 var arguments_ = [];
@@ -3682,14 +3682,14 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 // end include: postlibrary.js
 
 var ASM_CONSTS = {
-  76404: ($0) => { Module.__handle__=( a )=>{ return emval_handles[a]; }; Module.__bridge__=( a )=>{ return eval(a); }; Module.__invoke__ ( `${$0}`, Module ); }
+  76756: ($0) => { Module.__handle__=( a )=>{ return emval_handles[a]; }; Module.__bridge__=( a )=>{ return eval(a); }; Module.__call__ ( `${$0}`, Module ); }
 };
 
 // Imports from the Wasm binary.
 var _main,
-  _free,
   ___getTypeName,
   _malloc,
+  _free,
   _emscripten_builtin_memalign,
   _setThrew,
   __emscripten_tempret_set,
@@ -3744,8 +3744,8 @@ var _main,
   dynCall_ii,
   dynCall_viiii,
   dynCall_iiii,
-  dynCall_ji,
   dynCall_vii,
+  dynCall_ji,
   dynCall_ijj,
   dynCall_viii,
   dynCall_jij,
@@ -3769,9 +3769,9 @@ var _main,
 
 function assignWasmExports(wasmExports) {
   _main = Module['_main'] = wasmExports['main'];
-  _free = wasmExports['free'];
   ___getTypeName = wasmExports['__getTypeName'];
   _malloc = wasmExports['malloc'];
+  _free = wasmExports['free'];
   _emscripten_builtin_memalign = wasmExports['emscripten_builtin_memalign'];
   _setThrew = wasmExports['setThrew'];
   __emscripten_tempret_set = wasmExports['_emscripten_tempret_set'];
@@ -3826,8 +3826,8 @@ function assignWasmExports(wasmExports) {
   dynCall_ii = dynCalls['ii'] = wasmExports['dynCall_ii'];
   dynCall_viiii = dynCalls['viiii'] = wasmExports['dynCall_viiii'];
   dynCall_iiii = dynCalls['iiii'] = wasmExports['dynCall_iiii'];
-  dynCall_ji = dynCalls['ji'] = wasmExports['dynCall_ji'];
   dynCall_vii = dynCalls['vii'] = wasmExports['dynCall_vii'];
+  dynCall_ji = dynCalls['ji'] = wasmExports['dynCall_ji'];
   dynCall_ijj = dynCalls['ijj'] = wasmExports['dynCall_ijj'];
   dynCall_viii = dynCalls['viii'] = wasmExports['dynCall_viii'];
   dynCall_jij = dynCalls['jij'] = wasmExports['dynCall_jij'];
@@ -3982,18 +3982,6 @@ function invoke_ii(index,a1) {
   }
 }
 
-function invoke_ji(index,a1) {
-  var sp = stackSave();
-  try {
-    return dynCall_ji(index,a1);
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-    return 0n;
-  }
-}
-
 function invoke_iii(index,a1,a2) {
   var sp = stackSave();
   try {
@@ -4013,6 +4001,18 @@ function invoke_vii(index,a1,a2) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
     _setThrew(1, 0);
+  }
+}
+
+function invoke_ji(index,a1) {
+  var sp = stackSave();
+  try {
+    return dynCall_ji(index,a1);
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+    return 0n;
   }
 }
 
@@ -4084,10 +4084,10 @@ function invoke_j(index) {
   }
 }
 
-function invoke_iiii(index,a1,a2,a3) {
+function invoke_v(index) {
   var sp = stackSave();
   try {
-    return dynCall_iiii(index,a1,a2,a3);
+    dynCall_v(index);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;
@@ -4095,10 +4095,10 @@ function invoke_iiii(index,a1,a2,a3) {
   }
 }
 
-function invoke_v(index) {
+function invoke_iiii(index,a1,a2,a3) {
   var sp = stackSave();
   try {
-    dynCall_v(index);
+    return dynCall_iiii(index,a1,a2,a3);
   } catch(e) {
     stackRestore(sp);
     if (!(e instanceof EmscriptenEH)) throw e;

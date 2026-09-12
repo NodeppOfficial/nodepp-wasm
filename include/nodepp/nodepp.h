@@ -33,11 +33,19 @@ namespace nodepp { namespace process {
     void revoke( const T&... args ){ NODEPP_INVOKE().off( args... ); }
 
 extern "C" {
+    
+    inline int external_call_deferred( EM_STRING address, EM_VAL value ){
+    NODEPP_EVLOOP().loop_add([=](){ 
+        auto val = value.isUndefined() ? any_t() : any_t(value); 
+        auto out = call( string::to_u64( address ), val );
+    return -1; }); NODEPP_EVLOOP().wake(); return 1; }
+
     inline int external_call( EM_STRING address, EM_VAL value ){
         auto val = value.isUndefined() ? any_t() : any_t(value); 
         auto out = call( string::to_u64( address ), val );
         NODEPP_EVLOOP().wake(); return out;
     }
+
 }
 
     template< class... T >
@@ -75,7 +83,10 @@ extern "C" {
     inline void exit( int err=0 ){ 
     if( should_close () ){ goto DONE; } do {
         NODEPP_SHTDWN() = true; clear(); 
-    } while(0); DONE:; ::exit(err); }
+    } while(0); DONE:; EM_EVAL( R"(
+        Module.pauseMainLoop      ();
+        Module._ma_free_emscripten();
+    )", (uchar_64) rand() ); }
 
     inline void reset(){ os::reset(); }
 
@@ -111,7 +122,7 @@ namespace nodepp { namespace process {
         MAIN_THREAD_ASYNC_EM_ASM({
             Module.__handle__=( a )=>{ return emval_handles[a]; };
             Module.__bridge__=( a )=>{ return eval(a); };
-            Module.__invoke__ ( `${$0}`, Module );
+            Module.__call__   ( `${$0}`, Module );
         } , addr );
 
     }
@@ -132,7 +143,8 @@ namespace nodepp { namespace process {
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-EM_BIND( "__invoke__", nodepp::process::external_call );
+EM_BIND( "__invoke__", nodepp::process::external_call_deferred );
+EM_BIND( "__call__"  , nodepp::process::external_call );
 #endif
 
 /*────────────────────────────────────────────────────────────────────────────*/

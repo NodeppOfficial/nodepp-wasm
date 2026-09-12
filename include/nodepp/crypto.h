@@ -20,10 +20,10 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define NODEPP_CRYPTO_INITIALIZATOR()  /*unused*/
+#define NODEPP_CRYPTO_INITIALIZATOR() /*unused*/
 #define MBEDTLS_PLATFORM_MEMORY
-#define MBEDTLS_PLATFORM_CALLOC_MACRO  NODEPP_ALLOC().calloc
-#define MBEDTLS_PLATFORM_FREE_MACRO    NODEPP_ALLOC().free
+#define MBEDTLS_PLATFORM_FREE_MACRO   NODEPP_ALLOC().free
+#define MBEDTLS_PLATFORM_CALLOC_MACRO NODEPP_ALLOC().calloc
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

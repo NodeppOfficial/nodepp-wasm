@@ -133,7 +133,7 @@ namespace nodepp { namespace http {
                     headerObj[key] = value;
                 });
 
-                Module.__invoke__("${2}", {
+                Module.__call__("${2}", {
                     type   : 1          , 
                     headers: res.headers,
                     url    : res.url    ,
@@ -143,7 +143,7 @@ namespace nodepp { namespace http {
                 
             })
 
-            .catch( err => {  Module.__invoke__( "${2}", {
+            .catch( err => {  Module.__call__( "${2}", {
                 type: 0, data: err.message 
             }); });
 

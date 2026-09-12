@@ -339,9 +339,9 @@ public:
             const fd = Module.__handle__ ( ${0} );
 
             fd.write( tm ).then((e)=>{
-                Module.__invoke__( "${1}", { type:2, obj: e.value } );
+                Module.__call__( "${1}", { type:2, obj: e.value } );
             }).catch((e)=>{
-                Module.__invoke__( "${1}", { type:0 } ); 
+                Module.__call__( "${1}", { type:0 } ); 
             });
 
         ), 
@@ -372,9 +372,9 @@ public:
             const fd = Module.__handle__( ${0} );
 
             fd.read().then((e)=>{
-                Module.__invoke__( "${1}", { type:1, obj: e.value } );
+                Module.__call__( "${1}", { type:1, obj: e.value } );
             }).catch((e)=>{
-                Module.__invoke__( "${1}", { type:0 } ); 
+                Module.__call__( "${1}", { type:0 } ); 
             });
 
         ), 

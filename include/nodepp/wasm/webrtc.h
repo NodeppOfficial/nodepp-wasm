@@ -153,26 +153,26 @@ public:
 
             pc.ondatachannel = ({ channel }) => {
             let dc = channel ; dc.binaryType= "arraybuffer";
-                dc.onerror   = (e)=>{ Module.__invoke__( addr, { type: 4, data: "could not connect to the peer" }); };
-                dc.onmessage = (e)=>{ Module.__invoke__( addr, { type: 2, data: e.data }); };
-                dc.onopen    = ( )=>{ Module.__invoke__( addr, { type: 1 }); };
-                dc.onclose   = ( )=>{ Module.__invoke__( addr, { type: 3 }); };
-                /*-----------------*/ Module.__invoke__( addr, { type: 7, data: dc });
+                dc.onerror   = (e)=>{ Module.__call__( addr, { type: 4, data: "could not connect to the peer" }); };
+                dc.onmessage = (e)=>{ Module.__call__( addr, { type: 2, data: e.data }); };
+                dc.onopen    = ( )=>{ Module.__call__( addr, { type: 1 }); };
+                dc.onclose   = ( )=>{ Module.__call__( addr, { type: 3 }); };
+                /*-----------------*/ Module.__call__( addr, { type: 7, data: dc });
             };
 
             pc.addEventListener( "iceconnectionstatechange", (e) => {
             if( pc.iceConnectionState === "failed" ){ 
             if( pc.connectionState    === "failed" ){ 
-                /*-------------*/ Module.__invoke__( addr, { type: 3 } ); return; }
-                pc.restartIce();  Module.__invoke__( addr, { type: 6 } );
+                /*-------------*/ Module.__call__( addr, { type: 3 } ); return; }
+                pc.restartIce();  Module.__call__( addr, { type: 6 } );
             }});
 
             pc.onicecandidate = (e) => { if( e.candidate ){ 
-                Module.__invoke__( addr, { type: 0, data: btoa( JSON.stringify( e.candidate ) ) });
-            }}; Module.__invoke__( addr, { type: 5, data: pc } ); 
+                Module.__call__( addr, { type: 0, data: btoa( JSON.stringify( e.candidate ) ) });
+            }}; Module.__call__( addr, { type: 5, data: pc } ); 
 
         } catch(e) {
-            Module.__invoke__( addr, { type: 4, data: "could not connect to the server" });
+            Module.__call__( addr, { type: 4, data: "could not connect to the server" });
         }), obj->addr, tmp1 );
 
     }
@@ -233,11 +233,11 @@ public:
         } return -1; });
 
         auto tmp1 = json::stringify( object_t({
-        { "iceRestart"    , obj->agent.ice_restart     } }) );
+        { "iceRestart"    , self->obj->agent.ice_restart     } }) );
 
         auto tmp2 = json::stringify( object_t({
-        { "ordered"       , obj->agent.order           },
-        { "maxRetransmits", obj->agent.max_retransmits } }) );
+        { "ordered"       , self->obj->agent.order           },
+        { "maxRetransmits", self->obj->agent.max_retransmits } }) );
 
         EM_EVAL( NODEPP_STRINGIFY (( async ()=>{
 
@@ -251,22 +251,27 @@ public:
 
             dc.binaryType= "arraybuffer";
 
-            dc.onerror   = (e)=>{ Module.__invoke__( ctx, { type: 4, data: "could not connect to the peer" }); };
-            dc.onmessage = (e)=>{ Module.__invoke__( ctx, { type: 2, data: e.data }); };
-            dc.onopen    = ( )=>{ Module.__invoke__( ctx, { type: 1 }); };
-            dc.onclose   = ( )=>{ Module.__invoke__( ctx, { type: 3 }); };
+            dc.onerror   = (e)=>{ Module.__call__( ctx, { type: 4, data: "could not connect to the peer" }); };
+            dc.onmessage = (e)=>{ Module.__call__( ctx, { type: 2, data: e.data }); };
+            dc.onopen    = ( )=>{ Module.__call__( ctx, { type: 1 }); };
+            dc.onclose   = ( )=>{ Module.__call__( ctx, { type: 3 }); };
             
             const of = await pc.createOffer /*--*/ (${2});
             /*------*/ await pc.setLocalDescription( of );
             
-            Module.__invoke__( ctx , { type: 7, data: dc });
-            Module.__invoke__( addr, { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
+            Module.__call__( ctx , { type: 7, data: dc });
+            Module.__call__( addr, { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
 
         } catch( err ) {
 
-            Module.__invoke__( addr, { type: 0, data: err.message });
+            Module.__call__( addr, { type: 0, data: err.message });
 
-        }})(); ), addr, self->obj->pc.as_handle(), tmp1, tmp2, obj->agent.peer_id, self->obj->addr );
+        }})(); ), 
+            addr, 
+            self->obj->pc.as_handle(), tmp1, tmp2, 
+            self->obj->agent.peer_id , 
+            self->obj->addr 
+        );
 
     }); }
 
@@ -287,7 +292,7 @@ public:
         } return -1; });
 
         auto tmp = json::stringify( object_t({
-        { "iceRestart", obj->agent.ice_restart } }) );
+        { "iceRestart", self->obj->agent.ice_restart } }) );
 
         EM_EVAL( NODEPP_STRINGIFY (( async ()=>{
 
@@ -301,11 +306,11 @@ public:
             const an = await pc.createAnswer(${3});
             await pc.setLocalDescription    ( an );
             
-            Module.__invoke__( addr, { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
+            Module.__call__( addr, { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
 
         } catch( err ) {
 
-            Module.__invoke__( addr, { type: 0, data: err.message });
+            Module.__call__( addr, { type: 0, data: err.message });
 
         }})(); ), addr, self->obj->pc.as_handle(), peer_sdp, tmp );
 
@@ -333,11 +338,11 @@ public:
             const pc= Module.__handle__( ${1} );
             await pc.setRemoteDescription( JSON.parse(atob("${2}")) );
 
-            Module.__invoke__( "${0}", { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
+            Module.__call__( "${0}", { type: 1, data: btoa( JSON.stringify( pc.localDescription ) ) });
 
         } catch( err ) {
             
-            Module.__invoke__( "${0}", { type: 0, data: err.message } );
+            Module.__call__( "${0}", { type: 0, data: err.message } );
 
         }})(); ), addr, self->obj->pc.as_handle(), peer_sdp );
 
@@ -376,11 +381,11 @@ public:
             const pc  = Module.__handle__( ${1} );
             await pc.addIceCandidate( JSON.parse( atob("${2}") ) );
 
-            Module.__invoke__( "${0}", { type: 1 } );
+            Module.__call__( "${0}", { type: 1 } );
 
         } catch( err ) {
             
-            Module.__invoke__( "${0}", { type: 0, data: err.message } );
+            Module.__call__( "${0}", { type: 0, data: err.message } );
 
         }})(); ), addr, self->obj->pc.as_handle(), candidate );
 
@@ -398,8 +403,7 @@ public:
             ws.send( decodeURIComponent(escape(window.atob( '${2}' ))) );
 
         } catch(err){ return 0; } return ${1}; ), 
-            get_fd  (), 
-            msg.size(),
+            get_fd(), msg.size(),
             encoder::base64::atob( msg )
         ).as<ulong>();
     }

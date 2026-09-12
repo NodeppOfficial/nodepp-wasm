@@ -106,15 +106,15 @@ public:
             
             cli.binaryType= "arraybuffer";
 
-            cli.onclose   = (e) => { Module.__invoke__( addr, { type: 2 } ); };
-            cli.onopen    = (e) => { Module.__invoke__( addr, { type: 0 } ); };
-            cli.onmessage = (e) => { Module.__invoke__( addr, { type: 1, data: e.data } ); };
-            cli.onerror   = (e) => { Module.__invoke__( addr, { type: 3, data: "could not connect to the server" } ); };
+            cli.onclose   = (e) => { Module.__call__( addr, { type: 2 } ); };
+            cli.onopen    = (e) => { Module.__call__( addr, { type: 0 } ); };
+            cli.onmessage = (e) => { Module.__call__( addr, { type: 1, data: e.data } ); };
+            cli.onerror   = (e) => { Module.__call__( addr, { type: 3, data: "could not connect to the server" } ); };
 
-            /*--------------------*/ Module.__invoke__( addr, { type: 4, data: cli } );
+            /*--------------------*/ Module.__call__( addr, { type: 4, data: cli } );
 
         } catch(e) {
-            Module.__invoke__( addr, { type: 3, data: "could not connect to the server" } ); 
+            Module.__call__( addr, { type: 3, data: "could not connect to the server" } ); 
         }), url, obj->addr );
 
     }
