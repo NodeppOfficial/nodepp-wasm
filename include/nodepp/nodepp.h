@@ -83,10 +83,7 @@ extern "C" {
     inline void exit( int err=0 ){ 
     if( should_close () ){ goto DONE; } do {
         NODEPP_SHTDWN() = true; clear(); 
-    } while(0); DONE:; EM_EVAL( R"(
-        Module.pauseMainLoop      ();
-        Module._ma_free_emscripten();
-    )", (uchar_64) rand() ); }
+    } while(0); DONE:; emscripten_force_exit(0); }
 
     inline void reset(){ os::reset(); }
 

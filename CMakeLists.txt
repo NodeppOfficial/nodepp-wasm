@@ -19,11 +19,10 @@ target_link_libraries( nodepp INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/libmbedcrypto.a"
     
     "-sEXPORTED_RUNTIME_METHODS=['HEAPF32']"
-    "-sFORCE_FILESYSTEM=1"
+	"-sEXIT_RUNTIME=1"
  	"-sASSERTIONS=0"
     "-sASYNCIFY=1"
     "-sUSE_ZLIB=1"
-    "-sWASMFS=1"
     "-sWASM=1"
     "-lembind"
 
