@@ -15,6 +15,14 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #include "wasm/ws.h"
+#include "encoder.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace ws {
+    inline ws_t  client( const string_t& url ) { return ws_t(url); }
+    inline ws_t connect( const string_t& url ) { return ws_t(url); }
+}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
