@@ -1,20 +1,26 @@
 #include <nodepp/nodepp.h>
-#include <nodepp/bind.h>
+#include <nodepp/event.h>
 
 using namespace nodepp;
 
 void onMain(){
 
-    process::add( coroutine::add( COROUTINE(){
+    event_t<> event;
+    ptr_t<int> x ( 0UL, 10 );
+
+    event.add( coroutine::add( COROUTINE(){
     coBegin
 
-        while( true ){ EM_EVAL( _STRING_(
-           document.querySelector("[counter]").innerHTML = 'Hello World! ${0}';
-        ), process::now() ); coDelay(1000); }
+        while( *x >= 0 ){
+            console::log( "hello world", *x );
+        coDelay( 1000 ); *x -= 1; }
 
     coFinish
     }));
 
-    console::log("hello world!");
+    while( !event.empty() ){ 
+        event.emit(); 
+        process::delay(1);
+    }
 
 }
