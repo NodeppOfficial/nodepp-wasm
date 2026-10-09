@@ -17,6 +17,7 @@
 #include "any.h"
 #include "url.h"
 #include "path.h"
+#include "json.h"
 #include "stream.h"
 #include "promise.h"
 #include "wasm/http.h"
