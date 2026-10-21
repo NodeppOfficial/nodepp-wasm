@@ -109,9 +109,9 @@ public:
         obj->addr = process::invoke([=]( any_t raw ){
         auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
 
+            case 0: self->onSignal.emit( string_t( value["data"].as<EM_STRING>() ) ); return 1; break;
             case 4: self->onError .emit( string_t( value["data"].as<EM_STRING>() ) );
-            case 3: self->free(); /*-----------------------------------------------*/ return -1; break;
-            case 0: self->onSignal.emit( string_t( value["data"].as<EM_STRING>() ) ); return  1; break;
+            case 3: self->free(); /*-----------------------------------------------*/ break;
 
             case 5: self->obj->pc = value["data"]; return 1; break;
             case 7: self->obj->dc = value["data"]; return 1; break;
@@ -171,7 +171,7 @@ public:
             }}; Module.__call__( addr, { type: 5, data: pc } ); 
 
         } catch(e) {
-            Module.__call__( addr, { type: 4, data: "could not connect to the server" });
+            Module.__call__( addr, { type: 4, data: "webrtc not supported" });
         }), obj->addr, tmp1 );
 
     }
@@ -404,8 +404,7 @@ public:
             Module.__call__( "${3}", { type: 0, data: "disconnected" } );
 
         }), 
-            get_fd(), msg.size(), encoder::base64::atob( msg ),
-            obj->addr
+            get_fd(), msg.size(), encoder::base64::atob( msg ), obj->addr
         );  return msg.size();
     }
 

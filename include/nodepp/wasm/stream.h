@@ -55,7 +55,7 @@ protected:
     struct NODE {
 
         uchar_16 state = STATE::FS_STATE_CLOSE;
-        len_t range[2] = { 0, 0 }; 
+        len_t range[2] = { 0,0 }; kernel_t krn;
 
         uchar_64 tag; uchar_64 pd; OVRL ov[2];
         ulong timeout = 0UL;
@@ -97,12 +97,14 @@ protected:
             case 1: do {
                 
                 self->obj->ov[0].borrow = string_t( val["obj"].as<EM_STRING>() );
+                self->obj->krn.wake();
 
             return -1; } while(0);
 
             case 2: do {
                 
                 self->obj->ov[1].size = (ulong) -1; // val["obj"].as<uchar_64>();
+                self->obj->krn.wake();
 
             return -1; } while(0);
 
@@ -123,10 +125,24 @@ public:
     
     /*─······································································─*/
     
-    stream_t( EM_VAL rfd, EM_VAL wfd, ulong size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) { 
-        obj->state    = STATE::FS_STATE_OPEN; set_buffer_size( size ); 
-        obj->ov[0].fd = EM_VAL::undefined() ;
-        obj->ov[1].fd = EM_VAL::undefined() ;
+    stream_t( EM_VAL rfd, EM_VAL wfd, ulong size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) { stream( rfd, wfd, size ); }
+
+    stream_t( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) { stream( fd, size ); }
+
+    stream_t() : obj( new NODE() ){ }
+
+    /*─······································································─*/
+
+   ~stream_t() noexcept { if( obj.count()>1 && !is_closed() ){ return; } free(); }
+
+    /*─······································································─*/
+    
+    void stream( EM_VAL rfd, EM_VAL wfd, ulong size=NODEPP_CHUNK_SIZE ) { 
+
+        obj->state    = STATE  ::FS_STATE_OPEN; set_buffer_size( size ); 
+        obj->ov[0].fd = EM_VAL ::undefined()  ;
+        obj->ov[1].fd = EM_VAL ::undefined()  ;
+        obj->krn      = process::NODEPP_EVLOOP();
 
         auto out = EM_EVAL( NODEPP_STRINGIFY(
 
@@ -149,10 +165,12 @@ public:
 
     }
 
-    stream_t( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) { 
-        obj->state    = STATE::FS_STATE_OPEN; set_buffer_size( size ); 
-        obj->ov[0].fd = EM_VAL::undefined() ;
-        obj->ov[1].fd = EM_VAL::undefined() ;
+    void stream( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) { 
+
+        obj->state    = STATE  ::FS_STATE_OPEN; set_buffer_size( size ); 
+        obj->ov[0].fd = EM_VAL ::undefined()  ;
+        obj->ov[1].fd = EM_VAL ::undefined()  ;
+        obj->krn      = process::NODEPP_EVLOOP();
 
         auto out = EM_EVAL( NODEPP_STRINGIFY(
 
@@ -172,12 +190,6 @@ public:
         if( !out["readable"].isUndefined() ){ obj->ov[0].fd = out["readable"]; }
 
     }
-
-    stream_t() : obj( new NODE() ){ }
-
-    /*─······································································─*/
-
-   ~stream_t() noexcept { if( obj.count()>1 && !is_closed() ){ return; } free(); }
 
     /*─······································································─*/
 
@@ -229,7 +241,7 @@ public:
 
     /*─······································································─*/
 
-    uchar_64  get_fd() const noexcept { return (uchar_64) &obj->ov; }
+    uchar_64  get_fd() const noexcept { return (uchar_64) obj->ov; }
     uchar_64&    tag() const noexcept { return obj->tag; }
     uchar_64& get_pd() const noexcept { return obj->pd ; }
 
