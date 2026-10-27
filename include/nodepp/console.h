@@ -27,9 +27,6 @@ namespace nodepp { namespace console {
     int pout( const T&... args ){ return conio::log( args... ); }
 
     template< class... T >
-    int err( const T&... args ){ return conio::err( args... ); }
-
-    template< class... T >
     int log( const T&... args ){ return conio::log( args... ); }
 
     inline void wait(){ char x; conio::scan("%c",&x); }
@@ -38,33 +35,23 @@ namespace nodepp { namespace console {
 
     template< class... T >
     int warning( const T&... args ){ 
-        conio::log( "WARNING: " );
-        return log( args... ); 
-    }
+    return conio::wrn( "WARNING: ", args... ); }
 
     template< class... T >
     int success( const T&... args ){ 
-        conio::log( "SUCCESS: " );
-        return log( args... );  
-    }
+    return conio::log( "SUCCESS: ", args... ); }
 
     template< class... T >
     int error( const T&... args ){ 
-        conio::log( "ERROR: " ); 
-        return log( args... ); 
-    }
+    return conio::err( "ERROR: ", args... ); }
 
     template< class... T >
     int done( const T&... args ){ 
-        conio::log( "DONE: " ); 
-        return log( args... ); 
-    }
+    return conio::log( "DONE: ", args... ); }
 
     template< class... T >
     int info( const T&... args ){ 
-        conio::log( "INFO: " ); 
-        return log( args... ); 
-    }
+    return conio::nfo( "INFO: ", args... ); }
 
 }}
 

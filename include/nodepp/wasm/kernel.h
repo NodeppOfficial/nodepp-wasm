@@ -156,12 +156,16 @@ public:
 
     void off  ( ptr_t<task_t> address ) const noexcept { clear( address ); }
     void clear( ptr_t<task_t> address ) const noexcept {
+
         if( address.null() ) /*--------------*/ { return; }
         if( address->flag & TASK_STATE::CLOSED ){ return; }
-        if( address->sign == &obj ){
-            address->flag = TASK_STATE::CLOSED ;
-            remove( address->addr ); 
-        }   obj->ev_queue.off( address );
+        
+        auto ptr = (void*) encoder::pac::btoa( address->auth, (uchar_64) &obj );
+
+        if( ptr ){
+            address->flag = TASK_STATE::CLOSED; remove( ptr ); 
+        } else { obj->ev_queue.off ( address ); }
+
     }
 
     /*─······································································─*/
@@ -170,8 +174,8 @@ public:
     ptr_t<task_t> poll_add( T& inp, uchar flag, U cb, ulong timeout=0, const W&... args ) const noexcept {
     function_t<int,W...> clb ( cb ); if( inp.is_closed() ){ return nullptr; }
 
-        if( obj->uring.address( inp.get_pd() )==nullptr ) {
-            obj->uring.append ( &inp );
+        if( obj->uring.address( inp.get_pd() )==nullptr ){
+        if( obj->uring.append ( &inp )        ==nullptr ){ return loop_add( cb, args... ); }
 
             kevent_t     kv  ; kv.pd = inp.get_pd();
             kv.flag    = flag; kv.fd = inp.get_fd();
@@ -188,13 +192,13 @@ public:
 
         ptr_t<task_t> task( 0UL, task_t() );
 
-        task->addr  = obj->uring.address( inp.get_pd() );
-        task->flag  = TASK_STATE::OPEN; 
-        task->sign  = &obj;
+        task->flag = TASK_STATE::OPEN; 
+        auto  addr = (void*) obj->uring.address( inp.get_pd() ); 
+        task->auth = encoder::pac::atob( (uchar_64) addr, (uchar_64) &obj );
 
-        obj->kv_queue.as(task->addr)->data.event.add([=](){ 
+        obj->kv_queue.as(addr)->data.event.add([=](){ 
             return clb( args... )>=0 ? 1 : -1; 
-        }); invoker( task->addr );
+        }); invoker( addr );
 
     return task; }
 
@@ -232,8 +236,9 @@ public:
         obj->state &=~ FLAG::KV_STATE_SLEEP;
 
         for( auto &x: list ){ invoker( (void*)x ); }
+        clear_timeout(); return 1; 
     
-    clear_timeout(); return 1; }
+    }
 
 };}
 
@@ -443,12 +448,16 @@ public:
 
     void off  ( ptr_t<task_t> address ) const noexcept { clear( address ); }
     void clear( ptr_t<task_t> address ) const noexcept {
+        
         if( address.null() ) /*--------------*/ { return; }
         if( address->flag & TASK_STATE::CLOSED ){ return; }
-        if( address->sign == &obj ){
-            address->flag = TASK_STATE::CLOSED ;
-            remove( address->addr ); 
-        }   obj->ev_queue.off( address );
+        
+        auto ptr = (void*) encoder::pac::btoa( address->auth, (uchar_64) &obj );
+
+        if( ptr ){
+            address->flag = TASK_STATE::CLOSED; remove( ptr ); 
+        } else { obj->ev_queue.off ( address ); }
+
     }
 
     /*─······································································─*/
@@ -457,10 +466,7 @@ public:
     ptr_t<task_t> poll_add( T& inp, uchar flag, U cb, ulong timeout=0, const W&... args ) const noexcept {
     function_t<int,W...> clb ( cb ); if( inp.is_closed() ){ return nullptr; }
     
-        if( inp.get_pd()==KV_STATE_FALLBACK ){ if( is_std( inp.get_fd() ) ){
-                 return loop_add([=](){ return clb( args... )>=0 ? 1 : -1; });
-        } else { return loop_add( cb, args... ); }}
-
+        if( inp.get_pd()==FLAG::KV_STATE_FALLBACK ){ return loop_add( cb, args... ); }
         if( obj->kv_queue.as( (void*) inp.get_pd() )==nullptr ) {
 
             kevent_t     kv  ;
@@ -482,13 +488,14 @@ public:
         }
 
         ptr_t<task_t> task( 0UL, task_t() );
-        task->addr  = (void*) inp.get_pd();
-        task->flag  = TASK_STATE::OPEN; 
-        task->sign  = &obj;
 
-        obj->kv_queue.as(task->addr)->data.event.add([=](){ 
+        task->flag = TASK_STATE::OPEN;
+        auto  addr = (void*) inp.get_pd();
+        task->auth = encoder::pac::atob( (uchar_64) addr, (uchar_64) &obj );
+
+        obj->kv_queue.as( addr )->data.event.add([=](){ 
             return clb( args... )>=0 ? 1 : -1; 
-        }); invoker( task->addr );
+        }); invoker( addr );
 
     return task; }
 
@@ -770,12 +777,16 @@ public:
 
     void off  ( ptr_t<task_t> address ) const noexcept { clear( address ); }
     void clear( ptr_t<task_t> address ) const noexcept {
+        
         if( address.null() ) /*--------------*/ { return; }
         if( address->flag & TASK_STATE::CLOSED ){ return; }
-        if( address->sign == &obj ){
-            address->flag = TASK_STATE::CLOSED ;
-            remove( address->addr ); 
-        }   obj->ev_queue.off( address );
+        
+        auto ptr = (void*) encoder::pac::btoa( address->auth, (uchar_64) &obj );
+
+        if( ptr ){
+            address->flag = TASK_STATE::CLOSED; remove( ptr ); 
+        } else { obj->ev_queue.off ( address ); }
+
     }
 
     /*─······································································─*/
@@ -784,11 +795,7 @@ public:
     ptr_t<task_t> poll_add( T& inp, uchar flag, U cb, ulong timeout=0, const W&... args ) const noexcept {
     function_t<int,W...> clb ( cb ); if( inp.is_closed() ){ return nullptr; }
     
-        if( inp.get_pd()==FLAG::KV_STATE_FALLBACK ){ 
-        if( is_std( inp.get_fd() ) ) /*---------*/ {
-                 return loop_add([=](){ return clb( args... )>=0 ? 1 : -1; });
-        } else { return loop_add( cb, args... ); }}
-
+        if( inp.get_pd()==FLAG::KV_STATE_FALLBACK ){ return loop_add( cb, args... ); }
         if( obj->kv_queue.as( (void*) inp.get_pd() )==nullptr ) {
 
             kevent_t     kv  ;
@@ -811,13 +818,14 @@ public:
         }
 
         ptr_t<task_t> task( 0UL, task_t() );
-        task->addr  = (void*) inp.get_pd();
-        task->flag  = TASK_STATE::OPEN; 
-        task->sign  = &obj;
 
-        obj->kv_queue.as(task->addr)->data.event.add([=](){ 
+        task->flag = TASK_STATE::OPEN; 
+        auto  addr = (void*) inp.get_pd();
+        task->auth = encoder::pac::atob( (uchar_64) addr, (uchar_64) &obj );
+
+        obj->kv_queue.as(addr)->data.event.add([=](){ 
             return clb( args... )>=0 ? 1 : -1; 
-        }); invoker( task->addr );
+        }); invoker( addr );
 
     return task; }
 
@@ -968,8 +976,7 @@ public:
 
             while( clb( args... )>=0 ){
             if( time > 0 && time < process::now() ){ break; }
-            if( inp.is_waiting() ) /*-------*/ { coGoto(0); } 
-            coNext; }
+            if( inp.is_waiting() ) /*-------*/ { coGoto(0); } coNext; }
 
         coFinish
         }));

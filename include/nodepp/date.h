@@ -34,7 +34,7 @@ protected:
     /*─······································································─*/
 
     void set_time( ulong time, bool utc ) const noexcept {
-    auto out = EM_EVAL({
+    auto out = EM_EVAL( NODEPP_STRINGIFY (
         
         let date = new Date(${1});
         let out  = new Object(  );
@@ -55,7 +55,7 @@ protected:
             out["day"]    = date.getDay        ();
         }
 
-    return out; }, utc, time ); obj->utc = utc;
+    return out; ), utc, time ); obj->utc = utc;
 
         obj->day    = out["day"]   .as<uint>();
         obj->year   = out["year"]  .as<uint>();
@@ -67,7 +67,7 @@ protected:
     }
 
     void get_time( bool utc ) const noexcept {
-    auto out = EM_EVAL({ 
+    auto out = EM_EVAL( NODEPP_STRINGIFY (
         
         let date = new Date  ();
         let out  = new Object();
@@ -88,7 +88,7 @@ protected:
             out["day"]    = date.getDay        ();
         }
 
-    return out; }, utc ); obj->utc = utc;
+    return out; ), utc ); obj->utc = utc;
 
         obj->day    = out["day"]   .as<uint>();
         obj->year   = out["year"]  .as<uint>();
@@ -188,14 +188,14 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -217,7 +217,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -225,7 +225,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -248,7 +248,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -256,7 +256,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -279,7 +279,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -287,7 +287,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -310,7 +310,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -318,7 +318,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -341,7 +341,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -349,7 +349,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -372,7 +372,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -380,7 +380,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});
@@ -403,7 +403,7 @@ public:
             if( ${0} ){
                 data.setUTCDate   (${1});
                 data.setUTCYear   (${2});
-                data.setUTCHour   (${3});
+                data.setUTCHours  (${3});
                 data.setUTCMonth  (${4});
                 data.setUTCMinutes(${5});
                 data.setUTCSeconds(${6});
@@ -411,7 +411,7 @@ public:
             } else {
                 data.setDate      (${1});
                 data.setYear      (${2});
-                data.setHour      (${3});
+                data.setHours     (${3});
                 data.setMonth     (${4});
                 data.setMinutes   (${5});
                 data.setSeconds   (${6});

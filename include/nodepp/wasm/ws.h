@@ -79,7 +79,7 @@ public:
         auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
 
             case   3: self->onError.emit( string_t( value["data"].as<EM_STRING>() ) );
-            case   2: self->free(); return -1; break; 
+            case   2: self->free(); break; 
 
             case   4: self->obj->state = STATE::FS_STATE_OPEN;
                       self->obj->fd    = value[ "data" ];
@@ -111,7 +111,7 @@ public:
             /*--------------------*/ Module.__call__( addr, { type: 4, data: cli } );
 
         } catch(e) {
-            Module.__call__( addr, { type: 3, data: "could not connect to the server" } ); 
+            Module.__call__( addr, { type: 3, data: "websocket not supported" } ); 
         }), url, obj->addr );
 
     }
@@ -167,8 +167,7 @@ public:
             Module.__call__( "${3}", { type: 3, data: "disconnected" } );
 
         }), 
-            get_fd (), msg.size(), encoder::base64::atob( msg ),
-            obj->addr
+            get_fd (), msg.size(), encoder::base64::atob( msg ), obj->addr
         );  return msg.size();
     }
 

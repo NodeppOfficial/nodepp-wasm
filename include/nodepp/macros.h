@@ -74,7 +74,7 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define NODEPP_RESET() MAIN_THREAD_ASYNC_EM_ASM({ window.location.reload(); });
+#define NODEPP_RESET() MAIN_THREAD_ASYNC_EM_ASM({ window.location.reload(); })
 
 #if NODEPP_ALLOW_THROW_EXCEPTION==1
 #define NODEPP_THROW_ERROR(...) do { throw nodepp::except_t(__VA_ARGS__); } while(0)
