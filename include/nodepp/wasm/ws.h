@@ -47,13 +47,14 @@ protected:
         uchar_64 addr; uchar_64 tag;
         kernel_t krn ;
 
-       ~NODE(){ fd = EM_VAL::undefined(); }
+       ~NODE(){ fd= EM_VAL::undefined(); }
 
     };  ptr_t<NODE> obj;
 
     void kill() const noexcept { 
     if( !obj->fd.isUndefined() ){ obj->fd.call<EM_VAL>( "close" ); }
          obj->state |= STATE::FS_STATE_KILL; 
+         process::revoke( obj->addr ); 
     }
 
 public:
@@ -71,35 +72,35 @@ public:
 
     /*─······································································─*/
 
-    ws_t( const string_t& url ) noexcept : obj( new NODE() ) {
+    ws_t( const string_t& url ) noexcept : obj( 0UL ) {
         
         auto self = type::bind( this );
         obj->krn  = process::NODEPP_EVLOOP();
         obj->addr = process::invoke([=]( any_t raw ){
-        auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
+        auto value= raw.as<EM_VAL>(); self->obj->krn.wake();
+        switch( value["type"].as<int>() ){
 
-            case   3: self->onError.emit( string_t( value["data"].as<EM_STRING>() ) );
-            case   2: self->free(); return -1; break; 
+            case 3: self->onError.emit( string_t( value["data"].as<EM_STRING>() ) );
+            case 2: self->free(); break; 
 
-            case   4: self->obj->state = STATE::FS_STATE_OPEN;
-                      self->obj->fd    = value[ "data" ];
-            return 1; break;
+            case 4: self->obj->state = STATE::FS_STATE_OPEN;
+                    self->obj->fd    = value[ "data" ];
+            break;
 
-            case   0: self->onOpen   .emit(*self); 
-                      self->onConnect.emit(*self);
-            return 1; break;
+            case 0: self->onOpen   .emit(*self); 
+                    self->onConnect.emit(*self);
+            break;
                 
-            case   1: do {
+            case 1: do {
                 auto buffer = string_t( value["data"].as<EM_STRING>() ); 
                 self->onData.emit( buffer ); 
-            } while(0); return 1; break;
+            } while(0); break;
 
-        } return -1; });
+        } return 1; });
 
         EM_PUSH( NODEPP_STRINGIFY ( 
-            const addr= "${1}";    
-        try {
-            const cli = new WebSocket( "${0}" );
+             const addr= "${1}";    
+        try{ const cli = new WebSocket( "${0}" );
             
             cli.binaryType= "arraybuffer";
 
@@ -111,12 +112,12 @@ public:
             /*--------------------*/ Module.__call__( addr, { type: 4, data: cli } );
 
         } catch(e) {
-            Module.__call__( addr, { type: 3, data: "could not connect to the server" } ); 
+            Module.__call__( addr, { type: 3, data: "websocket not supported" } ); 
         }), url, obj->addr );
 
     }
     
-    ws_t() noexcept : obj( new NODE() ){}
+    ws_t() noexcept : obj( 0UL ){}
 
     /*─······································································─*/
 
@@ -125,8 +126,7 @@ public:
         if( is_state( STATE::FS_STATE_KILL  ) ){ return; } kill();
         if(!is_state( STATE::FS_STATE_CLOSE ) ){ onDrain .emit (); }
        
-        onClose.emit (); process::revoke( obj->addr ); 
-
+        onClose.emit (); /*--------------*/
         onError.clear(); onConnect.clear();
         onClose.clear(); onData   .clear();
         onDrain.clear(); onOpen   .clear();
@@ -167,8 +167,7 @@ public:
             Module.__call__( "${3}", { type: 3, data: "disconnected" } );
 
         }), 
-            get_fd (), msg.size(), encoder::base64::atob( msg ),
-            obj->addr
+            get_fd (), msg.size(), encoder::base64::atob( msg ), obj->addr
         );  return msg.size();
     }
 

@@ -19,10 +19,12 @@ protected:
 
     void kill() const noexcept { 
         obj->state |= STATE::FS_STATE_KILL; 
+        process::revoke( obj->ov[0].addr );
+        process::revoke( obj->ov[1].addr );
     }
 
     bool is_state( uchar_16 value ) const noexcept {
-        if( obj->state & value ){ return true; }
+         if( obj->state & value ){ return true; }
     return false; }
 
     void set_state( uchar_16 value ) const noexcept {
@@ -47,18 +49,17 @@ protected:
 protected:
 
     struct OVRL { 
+        uchar_64 addr  ;
         uchar    state ; EM_VAL fd ;
         string_t borrow; ulong size; 
-       ~OVRL(){ fd = EM_VAL::undefined(); }
+       ~OVRL(){ fd= EM_VAL::undefined(); }
     };
 
     struct NODE {
 
+        uchar_64 tag; uchar_64 pd; ulong timeout = 0UL;
         uchar_16 state = STATE::FS_STATE_CLOSE;
-        len_t range[2] = { 0, 0 }; 
-
-        uchar_64 tag; uchar_64 pd; OVRL ov[2];
-        ulong timeout = 0UL;
+        len_t range[2] = { 0,0 }; OVRL ov[2];
         
         ptr_t<char> buffer; string_t borrow;
         generator::file::until _until;
@@ -89,26 +90,18 @@ protected:
     uchar_64 invoker() const noexcept {
         auto self = type::bind( this );
     return process::invoke([self]( any_t raw ){ do {
-
         auto val = raw.as<EM_VAL>();
+    if( val["obj"].isUndefined() ){ break; } switch( val["type"].as<int>() ) {
 
-        if( val["obj"].isUndefined() ){ break; } switch( val["type"].as<int>() ) {
+        case 1: do {
+            self->obj->ov[0].borrow = string_t( val["obj"].as<EM_STRING>() );
+        return 1; } while(0); break;
 
-            case 1: do {
-                
-                self->obj->ov[0].borrow = string_t( val["obj"].as<EM_STRING>() );
+        case 2: do {
+            self->obj->ov[1].size = (ulong) -1; // val["obj"].as<uchar_64>();
+        return 1; } while(0); break;
 
-            return -1; } while(0);
-
-            case 2: do {
-                
-                self->obj->ov[1].size = (ulong) -1; // val["obj"].as<uchar_64>();
-
-            return -1; } while(0);
-
-        }   break;
-        
-    } while(0); self->free(); return -1; }); }
+    }} while(0); self->free(); return 1; }); }
             
 public:
 
@@ -123,10 +116,24 @@ public:
     
     /*─······································································─*/
     
-    stream_t( EM_VAL rfd, EM_VAL wfd, ulong size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) { 
-        obj->state    = STATE::FS_STATE_OPEN; set_buffer_size( size ); 
-        obj->ov[0].fd = EM_VAL::undefined() ;
-        obj->ov[1].fd = EM_VAL::undefined() ;
+    stream_t( EM_VAL rfd, EM_VAL wfd, ulong size=NODEPP_CHUNK_SIZE ) : obj( 0UL ) { stream( rfd, wfd, size ); }
+
+    stream_t( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) : obj( 0UL ) { stream( fd, size ); }
+
+    stream_t() : obj( 0UL ){ }
+
+    /*─······································································─*/
+
+   ~stream_t() noexcept { if( obj.count()>1 && !is_closed() ){ return; } free(); }
+
+    /*─······································································─*/
+    
+    void stream( EM_VAL rfd, EM_VAL wfd, ulong size=NODEPP_CHUNK_SIZE ) { 
+        if( obj->state & STATE ::FS_STATE_OPEN ){ return; }
+
+        obj->state    = STATE ::FS_STATE_OPEN; set_buffer_size( size );
+        obj->ov[0].fd = EM_VAL::undefined(); obj->ov[0].addr=invoker();
+        obj->ov[1].fd = EM_VAL::undefined(); obj->ov[1].addr=invoker();
 
         auto out = EM_EVAL( NODEPP_STRINGIFY(
 
@@ -149,10 +156,12 @@ public:
 
     }
 
-    stream_t( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) { 
-        obj->state    = STATE::FS_STATE_OPEN; set_buffer_size( size ); 
-        obj->ov[0].fd = EM_VAL::undefined() ;
-        obj->ov[1].fd = EM_VAL::undefined() ;
+    void stream( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) { 
+        if( obj->state & STATE ::FS_STATE_OPEN ){ return; }
+
+        obj->state    = STATE ::FS_STATE_OPEN; set_buffer_size( size ); 
+        obj->ov[0].fd = EM_VAL::undefined(); obj->ov[0].addr=invoker();
+        obj->ov[1].fd = EM_VAL::undefined(); obj->ov[1].addr=invoker();
 
         auto out = EM_EVAL( NODEPP_STRINGIFY(
 
@@ -172,12 +181,6 @@ public:
         if( !out["readable"].isUndefined() ){ obj->ov[0].fd = out["readable"]; }
 
     }
-
-    stream_t() : obj( new NODE() ){ }
-
-    /*─······································································─*/
-
-   ~stream_t() noexcept { if( obj.count()>1 && !is_closed() ){ return; } free(); }
 
     /*─······································································─*/
 
@@ -229,7 +232,7 @@ public:
 
     /*─······································································─*/
 
-    uchar_64  get_fd() const noexcept { return (uchar_64) &obj->ov; }
+    uchar_64  get_fd() const noexcept { return (uchar_64) obj->ov; }
     uchar_64&    tag() const noexcept { return obj->tag; }
     uchar_64& get_pd() const noexcept { return obj->pd ; }
 
@@ -263,7 +266,6 @@ public:
           { onDrain.emit(); }
 
         onClose .emit (); onDrain .clear();
-
         onUnpipe.clear(); onResume.clear();
         onError .clear(); onData  .clear();
         onOpen  .clear(); /*-------------*/
@@ -345,7 +347,8 @@ public:
             });
 
         ), 
-            obj->ov[1].fd.as_handle(), invoker(),
+            obj->ov[1].fd.as_handle(), 
+            obj->ov[1].addr          ,
             encoder::base64::atob( obj->ov[1].borrow )
         ); 
         
@@ -377,9 +380,7 @@ public:
                 Module.__call__( "${1}", { type:0 } ); 
             });
 
-        ), 
-            obj->ov[0].fd.as_handle(), invoker() 
-        ); 
+        ), obj->ov[0].fd.as_handle(), obj->ov[0].addr ); 
         
     return -2; }
 

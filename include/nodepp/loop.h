@@ -81,59 +81,58 @@ protected:
         auto y = obj->queue .as (x->data);
         auto o = obj->normal.get()->prev ? 1 : -1;
         
-        if( y->data.second->flag & TASK_STATE::USED   ){ 
-            obj->normal.prev(); 
-        return 0; }
-        
         if( y->data.second->flag & TASK_STATE::CLOSED ){ 
             obj->normal.erase(x);
             obj->queue .erase(y); 
         return 1; } 
 
+        if( y->data.second->flag & TASK_STATE::USED   ){ 
+            obj->normal.prev(); 
+        return 0; }
+
         y->data.second->flag |= TASK_STATE::USED;
 
-        uchar_64 d=0; while( ([&](){
+        uchar_64 d=0; while( ([&](){ do {
             
-            do{ int c=y->data.first (); auto z = coroutine::getno();
-            if( obj->normal.empty() ){ return -1; }
-            if( c==1 && z.flag&coroutine::STATE::CO_STATE_DELAY )
+            do{ int  c = y->data   .first(); 
+                auto z = coroutine::getno();
+
+            if( c==1 && ( z.flag & coroutine::STATE::CO_STATE_DELAY ) )
               { d=z.delay; goto GOT3; } switch(c) {
                 case  1  : goto GOT1;   break;
                 case -1  : goto GOT2;   break;
                 case  0  : goto GOT4;   break;
             } } while(0) ;
 
-            GOT1:;
+            break; GOT1:;
 
                 y->data.second->flag &=~ TASK_STATE::USED; 
-                obj->normal.prev(); return -1;
+                obj->normal.prev();
 
-            GOT2:;
+            break; GOT2:;
 
                 y->data.second->flag = TASK_STATE::CLOSED;
-                /*---------------*/ return -1;
 
-            GOT3:; do {
+            break; GOT3:; do {
 
                 y->data.second->flag &=~ TASK_STATE::USED;  
 
-                uchar_64 max__time = (uchar_32) -1;
+                uchar_64 max__time =    (uchar_32) -1;
                 uchar_64 wake_time = min( d+process::now(), max__time );
                 auto z = obj->blocked.as( get_nearest_timeout( wake_time ) );
                 
                 obj->blocked.insert( z, NODE_TASK( { wake_time, y } ));
                 obj->normal .erase ( x ); 
 
-            return -1; } while(0);
+            } while(0); break; GOT4:;
 
-            GOT4:;
-
-        return -1; })() >= 0 ){ /* unused */ }
-        return  o; } while(0); return -1;
+        } while(0); return -1; })() >= 0 ){ /* unused */ }
+                    return  o; 
+        } while(0); return -1;
 
     }
 
-public: loop_t() noexcept : obj( new NODE() ) {}
+public: loop_t() noexcept : obj( 0UL ) {}
 
     /*─······································································─*/
 
@@ -141,8 +140,9 @@ public: loop_t() noexcept : obj( new NODE() ) {}
     void clear( ptr_t<task_t> address ) const noexcept {
         if( address.null() ) /*--------------*/ { return; }
         if( address->flag & TASK_STATE::CLOSED ){ return; }
-        if( address->sign != &obj ) /*-------*/ { return; }
-            address->flag = TASK_STATE::CLOSED ;
+        if( encoder::pac::btoa( address->auth , (uchar_64) &obj )>0 ){ 
+            address->flag = TASK_STATE::CLOSED; 
+        }
     }
 
     /*─······································································─*/
@@ -191,9 +191,8 @@ public: loop_t() noexcept : obj( new NODE() ) {}
         obj->queue .push   ({[=](){ return clb(args...); }, tsk });
         obj->normal.unshift( obj->queue.last() ); 
 
-        tsk->addr = obj->queue.first();
+        tsk->auth = encoder::pac::atob( (uchar_64) obj->queue.first(), (uchar_64) &obj );
         tsk->flag = TASK_STATE::OPEN  ;
-        tsk->sign = &obj;
 
     return tsk; }
 
@@ -217,7 +216,7 @@ protected:
         queue_t<NODE_PAIR> queue ;
     };  ptr_t<NODE> obj;
 
-public: loop_t() noexcept : obj( new NODE() ) {}
+public: loop_t() noexcept : obj( 0UL ) {}
 
     /*─······································································─*/
 
@@ -225,8 +224,9 @@ public: loop_t() noexcept : obj( new NODE() ) {}
     void clear( ptr_t<task_t> address ) const noexcept {
         if( address.null() ) /*--------------*/ { return; }
         if( address->flag & TASK_STATE::CLOSED ){ return; }
-        if( address->sign!= &obj ) /*--------*/ { return; }
-            address->flag = TASK_STATE::CLOSED;
+        if( encoder::pac::btoa( address->auth , (uchar_64) &obj )>0 ){ 
+            address->flag = TASK_STATE::CLOSED; 
+        }
     }
 
     /*─······································································─*/
@@ -261,29 +261,28 @@ public: loop_t() noexcept : obj( new NODE() ) {}
 
         x->data.second->flag |= TASK_STATE::USED;
 
-        while( ([&](){
+        while( ([&](){ do {
             
-            do{ int c=x->data.first();
-            if( obj->queue.empty() ){ return -1; } switch(c) {
+            do{ int c=x->data.first(); switch(c) {
                 case  1 : goto GOT1; break;
                 case -1 : goto GOT2; break;
                 case  0 : goto GOT3; break;
             } } while(0);
 
-            GOT1:;
+            break; GOT1:;
 
                 x->data.second->flag &=~ TASK_STATE::USED; 
-                obj->queue.prev(); return -1;
+                obj->queue.prev();
 
-            GOT2:;
+            break; GOT2:;
 
                 x->data.second->flag = TASK_STATE::CLOSED;
-                /*---------------*/ return -1;
 
-            GOT3:;
+            break; GOT3:;
 
-        return -1; })() >= 0 ){ /* unused */ }
-        return  o; } while(0); return -1;
+        } while(0); return -1; })() >= 0 ){ /* unused */ }
+                    return  o; 
+        } while(0); return -1;
 
     }
 
@@ -294,12 +293,10 @@ public: loop_t() noexcept : obj( new NODE() ) {}
     ptr_t<task_t> tsk( 0UL, task_t() ); 
 
         function_t<int,V...> clb ( cb );
-
         obj->queue.unshift({[=](){ return clb(args...); }, tsk });
 
-        tsk->addr = obj->queue.first();
+        tsk->auth = encoder::pac::atob( (uchar_64) obj->queue.first(), (uchar_64) &obj );
         tsk->flag = TASK_STATE::OPEN  ;
-        tsk->sign = &obj;
 
     return tsk; }
 

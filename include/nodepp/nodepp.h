@@ -27,19 +27,13 @@ namespace nodepp { namespace process {
     /*─······································································─*/
 
     template< class... T >
-    int call( const T&... args ){ return NODEPP_INVOKE().emit( args... ); }
+    int call   ( const T&... args ){ return NODEPP_INVOKE().emit( args... ); }
 
     template< class... T >
     void revoke( const T&... args ){ NODEPP_INVOKE().off( args... ); }
 
 extern "C" {
     
-    inline int external_call_deferred( EM_STRING address, EM_VAL value ){
-    NODEPP_EVLOOP().loop_add([=](){ 
-        auto val = value.isUndefined() ? any_t() : any_t(value); 
-        auto out = call( string::to_u64( address ), val );
-    return -1; }); NODEPP_EVLOOP().wake(); return 1; }
-
     inline int external_call( EM_STRING address, EM_VAL value ){
         auto val = value.isUndefined() ? any_t() : any_t(value); 
         auto out = call( string::to_u64( address ), val );
@@ -85,17 +79,12 @@ extern "C" {
         NODEPP_SHTDWN() = true; clear(); 
     } while(0); DONE:; emscripten_force_exit(0); }
 
-    inline int next(){ 
-        /*--*/ next_time_interval  (); EM_NEXT();
-        /*--*/ NODEPP_ALLOC ().next();
-        return NODEPP_EVLOOP().next(); 
-    }
-
 }}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include "env.h"
+#include "bind.h"
+#include "os.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -106,20 +95,22 @@ namespace nodepp { namespace process {
 
     /*─······································································─*/
 
+    inline int next(){ 
+        /*--*/ next_time_interval  (); EM_NEXT();
+        /*--*/ NODEPP_ALLOC ().next();
+        return NODEPP_EVLOOP().next(); 
+    }
+
+    /*─······································································─*/
+
     inline void start(){
 
         NODEPP_SIGNAL().onSIGEXIT.once( [=](){ 
         process::exit(0); }); signal::start();
 
-        auto addr= process::invoke([=]( any_t raw ){
-             EM_MODULE() = raw.as<EM_VAL>(); 
-        return -1; });
-
-        MAIN_THREAD_ASYNC_EM_ASM({
+        MAIN_THREAD_EM_ASM({
             Module.__handle__=( a )=>{ return emval_handles[a]; };
-            Module.__bridge__=( a )=>{ return eval(a); };
-            Module.__call__   ( `${$0}`, Module );
-        } , addr );
+        });
 
     }
 
@@ -139,8 +130,7 @@ namespace nodepp { namespace process {
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-EM_BIND( "__invoke__", nodepp::process::external_call_deferred );
-EM_BIND( "__call__"  , nodepp::process::external_call );
+EM_BIND( "__call__", nodepp::process::external_call );
 #endif
 
 /*────────────────────────────────────────────────────────────────────────────*/

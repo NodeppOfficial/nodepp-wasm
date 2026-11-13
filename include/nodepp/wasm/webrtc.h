@@ -79,6 +79,7 @@ protected:
     if( !obj->dc.isUndefined() ){ obj->dc.call<EM_VAL>( "close" ); }
     if( !obj->pc.isUndefined() ){ obj->pc.call<EM_VAL>( "close" ); }
          obj->state |= STATE::FS_STATE_KILL; 
+         process::revoke( obj->addr ); 
     }
 
 public:
@@ -94,7 +95,7 @@ public:
 
     /*─······································································─*/
 
-    webrtc_t( agent_webrtc_t* args ) : obj( new NODE() ) {
+    webrtc_t( agent_webrtc_t* args ) : obj( 0UL ) {
         obj->agent = args==nullptr ? agent_webrtc_t() : *args;
         obj->krn   = process::NODEPP_EVLOOP(); 
  
@@ -107,27 +108,28 @@ public:
         auto self = type::bind( this );
 
         obj->addr = process::invoke([=]( any_t raw ){
-        auto value= raw.as<EM_VAL>(); switch( value["type"].as<int>() ){
+        auto value= raw.as<EM_VAL>(); self->obj->krn.wake();
+        switch( value["type"].as<int>() ){
 
+            case 0: self->onSignal.emit( string_t( value["data"].as<EM_STRING>() ) ); break;
             case 4: self->onError .emit( string_t( value["data"].as<EM_STRING>() ) );
-            case 3: self->free(); /*-----------------------------------------------*/ return -1; break;
-            case 0: self->onSignal.emit( string_t( value["data"].as<EM_STRING>() ) ); return  1; break;
+            case 3: self->free(); /*-----------------------------------------------*/ break;
 
-            case 5: self->obj->pc = value["data"]; return 1; break;
-            case 7: self->obj->dc = value["data"]; return 1; break;
-            case 6: self->onRenegociation.emit (); return 1; break;
+            case 5: self->obj->pc = value["data"]; break;
+            case 7: self->obj->dc = value["data"]; break;
+            case 6: self->onRenegociation.emit (); break;
 
             case 2: do {
                 auto data=string_t( value["data"].as<EM_STRING>() ); 
                 self->onData.emit ( data ); 
-            } while(0); return 1; break;
+            } while(0); break;
 
             case 1: self->set_state( STATE::FS_STATE_OPEN );
                     self->onConnect.emit( *self );
                     self->onOpen   .emit( *self );
-            return 1; /*--------*/ break;
+            break;
 
-        } return -1; });
+        } return 1; });
 
         auto tmp0 = array_t<object_t>(); for( auto x: obj->agent.url ){
         auto tmp  = object_t();
@@ -171,12 +173,12 @@ public:
             }}; Module.__call__( addr, { type: 5, data: pc } ); 
 
         } catch(e) {
-            Module.__call__( addr, { type: 4, data: "could not connect to the server" });
+            Module.__call__( addr, { type: 4, data: "webrtc not supported" });
         }), obj->addr, tmp1 );
 
     }
 
-    webrtc_t() : obj( new NODE() ) {}
+    webrtc_t() : obj( 0UL ) {}
 
     /*─······································································─*/
 
@@ -190,7 +192,7 @@ public:
 
     /*─······································································─*/
 
-    uchar_64  get_fd() const noexcept { return (uchar_64) obj->dc.as_handle(); }
+    uchar_64  get_fd() const noexcept { return (uchar_64) obj->pc.as_handle(); }
     uchar_64& get_pd() const noexcept { return obj->pd ; }
     uchar_64&    tag() const noexcept { return obj->tag; }
 
@@ -201,12 +203,11 @@ public:
         if( is_state( STATE::FS_STATE_KILL  ) ){ return; } kill();
         if(!is_state( STATE::FS_STATE_CLOSE ) ){ onDrain .emit (); }
 
-        onClose.emit (); process::revoke( obj->addr ); 
-         
+        onClose.emit (); /*--------------------*/
         onDrain.clear(); onRenegociation.clear();
-        onError.clear(); onConnect.clear();
-        onClose.clear(); onData   .clear();
-        onOpen .clear(); onSignal .clear();
+        onError.clear(); onConnect      .clear();
+        onClose.clear(); onData         .clear();
+        onOpen .clear(); onSignal       .clear();
 
     }
 
@@ -263,13 +264,12 @@ public:
 
         } catch( err ) {
 
-            Module.__call__( addr, { type: 0, data: err.message });
+            Module.__call__( addr, { type: 0, data: err.message    });
+            Module.__call__( ctx , { type: 4, data: "disconnected" });
 
-        }})(); ), 
-            addr, 
+        }})(); ), addr, 
             self->obj->pc.as_handle(), tmp1, tmp2, 
-            self->obj->agent.peer_id , 
-            self->obj->addr 
+            self->obj->agent.peer_id , self->obj->addr 
         );
 
     }); }
@@ -296,8 +296,9 @@ public:
         EM_PUSH( NODEPP_STRINGIFY (( async ()=>{
 
             const addr = "${0}"; 
+            const ctx  = "${4}";
         
-        try{
+        try {
             
             const pc = Module.__handle__ ( ${1} );
             await pc.setRemoteDescription( JSON.parse(atob("${2}")) );
@@ -309,9 +310,13 @@ public:
 
         } catch( err ) {
 
-            Module.__call__( addr, { type: 0, data: err.message });
+            Module.__call__( addr, { type: 0, data: err.message    });
+            Module.__call__( ctx , { type: 4, data: "disconnected" });
 
-        }})(); ), addr, self->obj->pc.as_handle(), peer_sdp, tmp );
+        }})(); ), 
+            addr, self->obj->pc.as_handle(), peer_sdp,
+            tmp , self->obj->addr
+        );
 
     }); }
 
@@ -340,9 +345,13 @@ public:
 
         } catch( err ) {
             
-            Module.__call__( "${0}", { type: 0, data: err.message } );
+            Module.__call__( "${0}", { type: 0, data: err.message    });
+            Module.__call__( "${3}", { type: 4, data: "disconnected" });
 
-        }})(); ), addr, self->obj->pc.as_handle(), peer_sdp );
+        }})(); ), 
+            addr    , self->obj->pc.as_handle(), 
+            peer_sdp, self->obj->addr 
+        );
 
     }); }
 
@@ -352,8 +361,14 @@ public:
 
         if( !is_available() ){ return -1; } 
 
-        EM_EVAL( NODEPP_STRINGIFY (( async ()=>{
-        Module.__handle__( ${0} );.restartIce(); })(); ), obj->pc.as_handle() );
+        EM_EVAL( NODEPP_STRINGIFY (( async ()=>{ try {
+            Module.__handle__( ${0} ).restartIce();
+        } catch(err) {
+            Module.__call__( "${1}", { type: 4, data: "disconnected" });
+        }})(); ), 
+            obj->pc.as_handle(),
+            obj->addr
+        );
 
     return 1; }
 
@@ -382,9 +397,13 @@ public:
 
         } catch( err ) {
             
-            Module.__call__( "${0}", { type: 0, data: err.message } );
+            Module.__call__( "${0}", { type: 0, data: err.message    });
+            Module.__call__( "${3}", { type: 4, data: "disconnected" });
 
-        }})(); ), addr, self->obj->pc.as_handle(), candidate );
+        }})(); ), 
+            addr     , self->obj->pc.as_handle(), 
+            candidate, self->obj->addr 
+        );
 
     });}
 
@@ -401,11 +420,11 @@ public:
 
         } catch(e){
             
-            Module.__call__( "${3}", { type: 0, data: "disconnected" } );
+            Module.__call__( "${3}", { type: 4, data: "disconnected" } );
 
         }), 
-            get_fd(), msg.size(), encoder::base64::atob( msg ),
-            obj->addr
+            obj->dc.as_handle() , msg.size(), 
+            encoder::base64::atob(msg), obj->addr
         );  return msg.size();
     }
 

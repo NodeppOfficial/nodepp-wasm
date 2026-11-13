@@ -1,26 +1,10 @@
 #include <nodepp/nodepp.h>
-#include <nodepp/event.h>
+#include <nodepp/wt.h>
 
 using namespace nodepp;
 
 void onMain(){
 
-    event_t<> event;
-    ptr_t<int> x ( 0UL, 10 );
-
-    event.add( coroutine::add( COROUTINE(){
-    coBegin
-
-        while( *x >= 0 ){
-            console::log( "hello world", *x );
-        coDelay( 1000 ); *x -= 1; }
-
-    coFinish
-    }));
-
-    while( !event.empty() ){ 
-        event.emit(); 
-        process::delay(1);
-    }
+    wt::connect( "https://localhost:8000/" )
 
 }

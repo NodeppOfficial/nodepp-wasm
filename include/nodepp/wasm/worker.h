@@ -7,8 +7,6 @@
  * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
-// FIXME: change to webworker
-
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #ifndef NODEPP_POSIX_WORKER
@@ -19,7 +17,7 @@
 namespace nodepp { class worker_t { 
 private:
 
-    mutex_t    &  get_mutex () const noexcept { static mutex_t     out; return out; }
+    mutex_t    & get_mutex  () const noexcept { static mutex_t     out; return out; }
     invoker_t<>& get_invoker() const noexcept { static invoker_t<> out; return out; }
 
     enum STATE : uchar {
@@ -42,9 +40,9 @@ protected:
 
         while( !self->is_closed( ) ){
         if   ( self->obj->cb()==-1 ){ break; }
-            auto info = coroutine::getno();
-            auto time = info.delay;
-        process::delay( time==0 ? 1 :time ); }
+            auto time = coroutine::getno().delay;
+            auto delay= time==0 ? 1 : time;
+        process::delay( time ); process::next(); }
 
     self->free(); return nullptr; }
 
@@ -67,7 +65,7 @@ protected:
 public:
 
     template< class T, class... V >
-    worker_t( T cb, const V&... arg ) noexcept : obj( new NODE() ){
+    worker_t( T cb, const V&... arg ) noexcept : obj( 0UL ){
         auto clb = function_t<int,V...>(cb);
         obj->cb  = function_t<int>([=](){ return clb(arg...); });
     if( emit()==-1 ){ free(); }; }
@@ -76,7 +74,7 @@ public:
 
    ~worker_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
-    worker_t() noexcept : obj( new NODE ) {}
+    worker_t() noexcept : obj( 0UL ) {}
 
     void free() const noexcept {
         if( obj->state == 0x00 ) /*---------*/ { return; }

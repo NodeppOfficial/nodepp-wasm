@@ -14,21 +14,10 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include <emscripten/emscripten.h>
-#include <emscripten/bind.h>
-#include <emscripten/val.h>
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define EM_VAL    emscripten::val
-#define EM_STRING std::string
-#define EM_ARRAY  std::vector
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-namespace nodepp { inline EM_VAL& EM_MODULE(){ static EM_VAL out; return out; }}
-
-/*────────────────────────────────────────────────────────────────────────────*/
+namespace nodepp { inline queue_t<string_t>& EM_QUEUE(){
+thread_local static queue_t<string_t> out; 
+    return out; 
+}}
 
 namespace nodepp { template< class... T >
 EM_VAL EM_GET( const T&... args ) {
@@ -40,30 +29,27 @@ EM_VAL EM_CALL( const EM_VAL& var, const T&... args ) {
     return var.call<EM_VAL>( args... );
 }}
 
-namespace nodepp { inline EM_VAL& EM_WINDOW() { 
-thread_local static EM_VAL out = EM_GET( "window" ); 
-    return out;
-}}
-
-namespace nodepp { inline EM_VAL& EM_DOCUMENT() { 
-thread_local static EM_VAL out = EM_GET( "document" ); 
-    return out;
-}}
-
-namespace nodepp { inline queue_t<string_t>& EM_QUEUE(){
-thread_local static queue_t<string_t> out; 
-    return out; 
-}}
-
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { template< class... T >
 EM_VAL EM_EVAL( const string_t& code, const T&... args ) {
 if( code.empty() ){ return EM_VAL(); }
+
     string_t eval = string::join ( "", "(()=>{ try {",code,"} catch(e) { console.error(e); } })();" );
-    /*----*/ eval = regex::format( eval, args... );
-    return EM_MODULE().call<EM_VAL>("__bridge__",EM_STRING( eval.get() ));
+
+    auto out   = ptr_t<EM_VAL>  (0UL);
+    auto addr  = process::invoke([=]( any_t raw ){ if( raw.has_value() ){
+         out[0]= raw.as<EM_VAL> ();
+    } return -1; });
+
+    MAIN_THREAD_EM_ASM({
+        Module.__call__( `${$0}`, eval( Module.__handle__( $1 ) ) );
+    } , addr, EM_VAL( EM_STRING( regex::format( eval, args... ).get() ) ).as_handle() );
+
+    return out[0];
+
 }}
+
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

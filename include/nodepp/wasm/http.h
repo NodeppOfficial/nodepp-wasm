@@ -85,20 +85,18 @@ namespace nodepp { namespace http {
            res_t<http_t> res, rej_t<except_t> rej 
     ){
 
-        if( !url::is_valid( fetch.url ) ){ rej(except_t("invalid URL")); return; }
-
-        auto addr = process::invoke([=]( any_t raw ){ do { 
-        auto value= raw.as<EM_VAL>();
+        auto addr = process::invoke([=]( any_t raw ){ do {
+        auto value= raw.as<EM_VAL> ();
 
             if( value["type"].as<int>() == 0 ){ 
                 rej( string_t( value["data"].as<EM_STRING>() ) ); 
             break; }
 
             auto keys = EM_GET("Object").call<EM_VAL>( "keys", value["headers"] );
-            int  len  = keys ["length"] .as  <int   >(); header_t hdrs;
-            auto tmp  = value["headers"];
+            int  len  = keys  ["length"].as  <int   >(); header_t hdrs;
+            auto tmp  = value ["headers"];
 
-            for( int x=len; x-->0; ) {
+            for( int x=len; x-->0; ){
                  auto key = string_t( keys[x] .as<EM_STRING>() );
                  auto val = string_t( tmp[key].as<EM_STRING>() );
                  hdrs[key]= val;
@@ -125,31 +123,26 @@ namespace nodepp { namespace http {
         if( !fetch.method .empty() ){ obj.push( string::join( "", "method: \"", fetch.method , "\"," ) ); }
         if(  fetch.timeout > 0     ){ obj.push( string::join( "", "timeout:\"", fetch.timeout, "\"," ) ); }
         if( !fetch.headers.empty() ){ obj.push( string::join( "", "headers:  ", hdr ) /*----------*/ ); }
-        obj.push( "}" );
+        obj.push( "}" ); EM_PUSH( R"( ( async ()=>{ try {
+            
+            const res = await fetch( "${0}", ${1} );
+            const headerObj = {};
 
-        EM_PUSH( NODEPP_STRINGIFY ( fetch( "${0}", ${1} )
+            res.headers.forEach((value, key)=>{ headerObj[key] = value; });
 
-            .then( res => { const headerObj = {};
+            Module.__call__("${2}", {
+                type   : 1          , 
+                headers: res.headers,
+                url    : res.url    ,
+                status : res.status ,
+                data   : res.body   , 
+            });
 
-                res.headers.forEach( (value, key) => {
-                    headerObj[key] = value;
-                });
+        } catch(err){
 
-                Module.__call__("${2}", {
-                    type   : 1          , 
-                    headers: res.headers,
-                    url    : res.url    ,
-                    status : res.status ,
-                    data   : res.body   , 
-                });
-                
-            })
-
-            .catch( err => {  Module.__call__( "${2}", {
-                type: 0, data: err.message 
-            }); });
-
-        ), fetch.url, string::join( obj, "" ), addr );
+            Module.__call__( "${2}", { type: 0, data: err.message });
+            
+        } })(); )", fetch.url, string::join( obj, "" ), addr );
 
     }); }
 

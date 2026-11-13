@@ -250,7 +250,7 @@ namespace nodepp { namespace fs {
             }
             
         } carch(e){ /*unused*/ }
-            Module.__call__('${1}',undefined);s
+            Module.__call__('${1}',undefined);
         ) );
 
     return 1; }
@@ -265,7 +265,7 @@ namespace nodepp { namespace fs {
         queue_t<string_t> queue;
 
         auto addr = process::invoke([=]( any_t item ){
-        if( !item.has_value() ){ 
+        if( !item.has_value() ) {
         if( queue.empty() ){ rej( except_t( "not exists or empty" ) ); }
         else /*---------*/ { res( queue.data() ); } return -1; } do { 
             

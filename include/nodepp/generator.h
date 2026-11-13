@@ -91,9 +91,9 @@ namespace nodepp { namespace generator { namespace file {
 
         coWait( _read( fd )==1 );
         if( _read.state<=0 ){ state=0; coEnd; }
-        fd->set_borrow ( _read.data ); coGoto(0);
-
-    coFinish }};
+        fd->set_borrow ( _read.data );
+        
+    coAgain }};
 
     /*─······································································─*/
 
@@ -126,9 +126,9 @@ namespace nodepp { namespace generator { namespace file {
 
         coWait( _read( fd )==1 ); if( _read.state<=0 ){
             data = borrow; state = data.size(); coEnd; 
-        }   fd->set_borrow ( borrow+_read.data ); coGoto(0);
-
-    coFinish }};
+        }   fd->set_borrow ( borrow+_read.data );
+        
+    coAgain }};
 
     /*─······································································─*/
 
@@ -161,9 +161,9 @@ namespace nodepp { namespace generator { namespace file {
 
         coWait( _read( fd )==1 ); if( _read.state<=0 ){
             data = borrow; state = data.size(); coEnd; 
-        }   fd->set_borrow ( borrow+_read.data ); coGoto(0);
-
-    coFinish }};
+        }   fd->set_borrow ( borrow+_read.data );
+        
+    coAgain }};
 
 }}}
 #undef NODEPP_GENERATOR
@@ -887,7 +887,7 @@ namespace nodepp { namespace generator { namespace ws {
 
             if ( sx < 126 ){
                 bfx[idx]|= type::cast<uchar>( sx ); ++idx;
-            } elif ( sx < 65536 ){
+            } elif ( sx < ulong( (uchar_16) -1 ) ){
                 bfx[idx]|= (uchar)(126); ++idx; 
 
                 auto len = sizeof(uchar_16);

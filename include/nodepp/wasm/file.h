@@ -92,7 +92,7 @@ public:
 
     /*─······································································─*/
 
-    file_t( const string_t& path, const string_t& mode, const ulong& _size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) {
+    file_t( const string_t& path, const string_t& mode, const ulong& _size=NODEPP_CHUNK_SIZE ) : obj( 0UL ) {
             obj->fd = fopen( path.c_str(), get_fd_flag(mode).get() ); 
         if( obj->fd == nullptr ){
             auto error = except_t( path, "such file or directory does not exist"  );
@@ -100,7 +100,7 @@ public:
         }   set_buffer_size( _size ); 
     }
 
-    file_t( FILE* fd, const ulong& _size=NODEPP_CHUNK_SIZE ) : obj( new NODE() ) {
+    file_t( FILE* fd, const ulong& _size=NODEPP_CHUNK_SIZE ) : obj( 0UL ) {
         if( fd == nullptr ){ 
             NODEPP_THROW_ERROR( except_t( "invalid FILE*" ) );
         }   obj->fd = fd; set_buffer_size( _size ); 
@@ -108,7 +108,7 @@ public:
 
    ~file_t() noexcept { if( obj.count()>1 && !is_closed() ){ return; } free(); }
 
-    file_t() noexcept : obj( new NODE() ) {}
+    file_t() noexcept : obj( 0UL ) {}
 
     /*─······································································─*/
 

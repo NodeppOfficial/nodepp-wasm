@@ -1,136 +1,54 @@
-# Nodepp-Wasm: The Unified Asynchronous Real-Time C++ Runtime
-> **The DOOM of Async Frameworks: Write Once, Compile Everywhere, Process Everything.**
+# Nodepp-WASM: An Asynchronous Runtime for C++ ( WASM )
 
-[![Platform](https://img.shields.io/badge/platform-%20WASM%20-blue)](https://github.com/NodeppOfficial/nodepp-wasm)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/platform-WASM-blue)](https://github.com/NodeppOfficial/nodepp)
+[![Valgrind Memory Test](https://img.shields.io/badge/memory-zero_leaks-green)](https://github.com/NodeppOfficial/nodepp/blob/main/benchmark/valgrind_benchmark/readme.md)
 
-Nodepp-WASM brings the raw performance of C++ and the "Shared-Nothing" architecture of Nodepp to the browser. By leveraging Emscripten and WebAssembly, Nodepp allows you to build complex, concurrent web applications, VR experiences, and high-performance tools with a familiar, asynchronous C++ syntax.
+Nodepp is an asynchronous C++ runtime that unifies application development under a single syntax, a single codebase, and a single execution model. It starts from a simple premise: you don't need a different language for every layer of your application. The same code that runs on a Linux server can run in a browser via WASM, on an ESP32, or on an Arduino Nano — without changes.
 
-Stop compromising between web accessibility and native speed. With Nodepp, your browser-based applications benefit from the same Zero-Copy Slicing and O(1) Event Loop used in our server and embedded versions.
+The inspiration doesn't come from a modern framework, but from Doom. Doom wasn't revolutionary for its graphics, but for its portability: it ran on hardware nobody imagined because its design didn't depend on a specific platform. That same philosophy guided Nodepp — a runtime so universal it runs on anything with a C++11 compiler, from 2KB of RAM to 64 cores. It's not a framework tied to an ecosystem. It's a runtime that adapts to the hardware, not the other way around.
 
-🔗: [Nodepp The MOST Powerful Framework for Asynchronous Programming in C++](https://medium.com/p/c01b84eee67a)
+Most runtimes grow until they can't be understood. Nodepp went the other direction. ~3,800 lines for the entire core. 2KB for the binary. 0% CPU when idle. No STL, no exceptions, no RTTI — not because they're bad, but because they aren't necessary. The result is a runtime small enough to fit on any controller and simple enough to audit completely. Nothing to trust. Nothing to hide.
 
-## Featured Project: Duck Hunt VR (WASM Edition)
+## Featured Projects
 
-To showcase [Nodepp for Web](https://github.com/NodeppOfficial/nodepp-wasm), we ported the classic Duck Hunt to Virtual Reality, running natively in the browser via WebAssembly. This project pushes the limits of web-based VR by combining low-level C++ performance with modern Web APIs.
+### **[Enigma Machine - Arduino Nano](https://wokwi.com/projects/449104127751150593)**: A fully functional Enigma machine running on 2KB of RAM.
+https://github.com/user-attachments/assets/9b870671-3854-444f-893d-40fdce31a629
 
-https://github.com/user-attachments/assets/ab26287e-bd73-4ee8-941b-d97382e203c9
+### **[Spacesus.io](https://spacesus.io)**: P2P multiplayer game built on Nodepp, WebRTC, and Raylin.
+https://github.com/user-attachments/assets/a8b4d56d-0291-4aa8-98e6-926116215f8f
 
-Play it now: [Duck Hunt VR on Itch.io](https://edbcrepo.itch.io/duck-hunt-vr)
-
-## Featured Project: Cursed-Luna (WASM Remake)
-Cursed-Luna is a high-performance remake of the Global Game Jam 2018 classic. Originally built around the theme of Transmission, this version has been completely rewritten in C++ using Nodepp and Raylib to bring tight gameplay mechanics to the browser via WebAssembly.
-
-https://github.com/user-attachments/assets/3647b5b6-fbfd-4281-af0f-f35f3260a319
-
-Play it now: [Cursed-Luna on Itch.io](https://edbcrepo.itch.io/cursed-luna)
-
-## Dependencies & Cmake Integration
-```bash
-#emscripten
-- 🪟: pacman -S mingw-w64-ucrt-x86_64-emscripten
-- 🐧: sudo apt install emscripten
-```
-```bash
-include(FetchContent)
-
-FetchContent_Declare(
-	nodepp
-	GIT_REPOSITORY   https://github.com/NodeppOfficial/nodepp-wasm
-	GIT_TAG          origin/main
-	GIT_PROGRESS     ON
-)
-FetchContent_MakeAvailable(nodepp)
-
-#[...]
-
-target_link_libraries( #[...]
-	PUBLIC nodepp #[...]
-)
-```
-
-## Features
-
-- **Near-Native Speed:** Execute C++ logic at nearly the speed of light within the browser sandbox.
-- **ASYNCIFY Integration:** Seamlessly handle asynchronous C++ logic within the single-threaded environment of the browser.
-- **Smart Memory:** Uses the same `ptr_t` architecture to manage memory safely, preventing leaks in long-running web sessions.
-- **Unified API:** Use the exact same `http::fetch` and `ws::connect` code on WASM that you use on Linux or Arduino.
-
-## Code Examples
-
-### Asynchronous HTTP Fetch (Browser)
-Nodepp abstracts the complex Emscripten Fetch API into a clean, Promise-based structure.
+## Quick Start
 
 ```cpp
 #include <nodepp/nodepp.h>
-#include <nodepp/http.h>
 
 using namespace nodepp;
 
-void onMain() {
+void onMain(){ 
 
-    fetch_t args;
-            args.method = "GET";
-            args.url    = "http://localhost:6931/";
+    auto addr = process::invoke([=]( any_t raw ){
+        console::log( "hello world!" );
+    return 1; });
+    
+    EM_EVAL( R"(
+        document.querySelector('body').innerHTML=`
+        <button onclick="Module.__call__('${0}',undefined);" > click </button>
+        `; // console.log('hello world!');    
+    )", addr );
 
-    http::fetch( args )
+    process::add( coroutine::add( COROUTINE(){
+    coBegin
 
-    .fail([=]( except_t err ){ console::log( err ); })
+        while( true ){
+            console::log( ">>", process::now() );
+        coDelay(1000); }
 
-    .then([=]( http_t cli ){
-        auto raw = stream::await( cli );
-        console::log( "->", cli.status, raw.value() );
-    });
-
-}
-```
-
-### Real-time WebSockets
-Nodepp also suports modern protocols seamlessly like websocket for real-time aplication.
-
-```cpp
-#include <nodepp/nodepp.h>
-#include <nodepp/ws.h>
-
-using namespace nodepp;
-
-void onMain() {
-
-    auto srv = ws::connect( "wss://localhost:8000" );
-
-    srv.onConnect([=]( ws_t cli ){
-
-        cli.onData([]( string_t data ){
-            console::log( data );
-        });
-
-        cli.onClose([](){
-            console::log( "done" );
-        });
-
-    });
+    coFinish
+    }));
 
 }
 ```
-
-## One Codebase, Every Screen
-Nodepp is the only framework that lets you share logic between the deepest embedded layers and the highest web layers.
-
-- **📌: Hardware:** [NodePP for Arduino](https://github.com/NodeppOfficial/nodepp-arduino)
-- **📌: Desktop:** [Nodepp for Desktop](https://github.com/NodeppOfficial/nodepp)
-- **📌: Browser:** [Nodepp for WASM](https://github.com/NodeppOfficial/nodepp-wasm)
-- **📌: ESP32:** [Nodepp for ESP32](https://github.com/NodeppOfficial/nodepp-esp32)
-- **📌: EPS8266:** [Nodepp for ESP8266](https://github.com/NodeppOfficial/nodepp-esp8266)
-
-## Contributing
-
-Nodepp is an open-source project that values Mechanical Sympathy and Technical Excellence.
-
-- **Sponsorship:** Support the project via [Ko-fi](https://ko-fi.com/edbc_repo).
-- **Bug Reports:** Open an issue via GitHub.
-- **License:** MIT.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/edbc_repo)
 
 ## License
-**Nodepp** is distributed under the MIT License. See the LICENSE file for more details.
+MIT. Use it anywhere.

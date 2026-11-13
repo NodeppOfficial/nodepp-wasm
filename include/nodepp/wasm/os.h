@@ -21,11 +21,10 @@
 
 namespace nodepp { namespace os {
 
-    inline uchar_64 rand() {
-    thread_local static uchar_64 seed = string::to_u64( EM_EVAL( "return `${Math.random()}`.slice(2)" ).as<EM_STRING>() ) ^ (uchar_64)&seed;
-        seed ^= seed << 0x11;
-        seed ^= seed >> 0x07;
-        seed ^= seed << 0x0b; return seed;
+    inline uchar_64 rand() { 
+        /*-----------*/ uchar_64 msk = encoder::random::generate( process::now() );
+    thread_local static uchar_64 out = (uchar_64) &NODEPP_LOCAL_SHTDWN();
+        out = encoder::random::generate(out^ msk); return out; 
     }
     
     /*─······································································─*/
@@ -41,6 +40,9 @@ namespace nodepp { namespace os {
     }
 
     /*.........................................................................*/
+
+    template< class... T >
+    inline void alert( T... args ){ EM_EVAL( "alert('${0}')", string::join( " ", args... ) ); }
 
     template< class... T >
     inline EM_VAL exec( string_t cmd, T... args ){ return EM_EVAL( cmd, args... ); }

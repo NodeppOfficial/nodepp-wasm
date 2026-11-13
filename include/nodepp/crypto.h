@@ -64,7 +64,7 @@ protected:
 
 public:
 
-    hash_t( mbedtls_md_type_t type, ulong output_length ) : obj( new NODE() ) { 
+    hash_t( mbedtls_md_type_t type, ulong output_length ) : obj( 0UL ) { 
     NODEPP_CRYPTO_INITIALIZATOR();
         
         obj->bff    = ptr_t<uchar>( output_length );
@@ -125,7 +125,7 @@ protected:
 public:
 
     template< class T >
-    hmac_t( const string_t& key, const T& type, ulong length ) : obj( new NODE() ) { 
+    hmac_t( const string_t& key, const T& type, ulong length ) : obj( 0UL ) { 
     NODEPP_CRYPTO_INITIALIZATOR();
 
         if( key.empty() ){ NODEPP_THROW_ERROR("can't initializate hmac_t"); }
@@ -185,7 +185,7 @@ public:
     event_t<>         onClose;
     event_t<string_t> onData;
 
-    xor_t( const string_t& key ) : obj( new NODE() ) {
+    xor_t( const string_t& key ) : obj( 0UL ) {
     NODEPP_CRYPTO_INITIALIZATOR();
     
         if( key.empty() ){ NODEPP_THROW_ERROR("can't initializate xor_t"); }
@@ -197,7 +197,7 @@ public:
         obj->ctx = ptr_t<CTX> ({ item1 });
     }
 
-    xor_t() noexcept : obj( new NODE() ) {
+    xor_t() noexcept : obj( 0UL ) {
         NODEPP_CRYPTO_INITIALIZATOR(); obj->state = 0; 
     }
     
@@ -279,11 +279,11 @@ public:
     event_t<string_t> onData;
     event_t<>         onClose;
 
-    encrypt_t( const string_t& iv, const string_t& key, mbedtls_cipher_type_t type ) : obj( new NODE() ) { 
+    encrypt_t( const string_t& iv, const string_t& key, mbedtls_cipher_type_t type ) : obj( 0UL ) { 
         NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, iv);
     }
 
-    encrypt_t( const string_t& key, mbedtls_cipher_type_t type ) : obj( new NODE() ) {     
+    encrypt_t( const string_t& key, mbedtls_cipher_type_t type ) : obj( 0UL ) {     
         NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, nullptr); 
     }
 
@@ -373,12 +373,12 @@ public:
     event_t<>         onClose;
 
     template< class T >
-    decrypt_t( const string_t& key, const T& type ) : obj( new NODE() ) { 
+    decrypt_t( const string_t& key, const T& type ) : obj( 0UL ) { 
         NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, nullptr); 
     }
 
     template< class T >
-    decrypt_t( const string_t& iv, const string_t& key, const T& type ) : obj( new NODE() ) { 
+    decrypt_t( const string_t& iv, const string_t& key, const T& type ) : obj( 0UL ) { 
         NODEPP_CRYPTO_INITIALIZATOR(); _init_(type, key, iv);
     }
 
@@ -418,7 +418,7 @@ protected:
 public:
   
    ~base58_encoder_t() noexcept { if( obj.count()>1 ){ return; } free(); }
-    base58_encoder_t() : obj( new NODE() ) { obj->state = 1; }
+    base58_encoder_t() : obj( 0UL ) { obj->state = 1; }
 
     string_t get() const noexcept { if( obj->state == 0 ){ return nullptr; }
         auto raw = string::join( obj->bff, "" );
@@ -451,7 +451,7 @@ protected:
 public:
 
    ~base58_decoder_t() noexcept { if( obj.count()>1 ){ return; } free(); }
-    base58_decoder_t() : obj( new NODE() ) { obj->state = 1; }
+    base58_decoder_t() : obj( 0UL ) { obj->state = 1; }
 
     void update( const string_t& msg ) const noexcept { 
          if( obj->state!=1 ){ return; } obj->bff.push( msg );
@@ -499,7 +499,7 @@ public:
 
    ~base64_encoder_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
-    base64_encoder_t() noexcept : obj( new NODE() ) {
+    base64_encoder_t() noexcept : obj( 0UL ) {
     NODEPP_CRYPTO_INITIALIZATOR();
 
         obj->state = 1; obj->bff = ptr_t<char>( NODEPP_CHUNK_SIZE, '\0' );
@@ -593,7 +593,7 @@ public:
 
    ~base64_decoder_t() noexcept { if( obj.count()>1 ){ return; } free(); }
 
-    base64_decoder_t() noexcept : obj( new NODE() ) {
+    base64_decoder_t() noexcept : obj( 0UL ) {
     NODEPP_CRYPTO_INITIALIZATOR();
 
         obj->state = 1; obj->bff = ptr_t<char>( NODEPP_CHUNK_SIZE, '\0' );
@@ -687,7 +687,7 @@ protected:
 
 public:
 
-    rsa_t() : obj( new NODE() ) {
+    rsa_t() : obj( 0UL ) {
     NODEPP_CRYPTO_INITIALIZATOR();
         if( mbedtls_ctr_drbg_seed(&obj->ctr_drbg, mbedtls_entropy_func, &obj->entropy, 
                                   (const uchar*)"rsa_t", 5)  !=0
@@ -833,7 +833,7 @@ protected:
 public:
 
     template< class T >
-    ec_t( const string_t& key, const T& type ) noexcept : obj( new NODE() ) {
+    ec_t( const string_t& key, const T& type ) noexcept : obj( 0UL ) {
     NODEPP_CRYPTO_INITIALIZATOR();
 
         if( key.empty() ){ NODEPP_THROW_ERROR("can't initializate ec_t"); }
@@ -849,7 +849,7 @@ public:
     }
 
     template< class T >
-    ec_t( const T& type ) noexcept : obj( new NODE() ) {
+    ec_t( const T& type ) noexcept : obj( 0UL ) {
     NODEPP_CRYPTO_INITIALIZATOR();
     
         if( mbedtls_ecp_group_load(&obj->keypair.grp, type) != 0 ){ return; }
