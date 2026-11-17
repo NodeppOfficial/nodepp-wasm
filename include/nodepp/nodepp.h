@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -15,49 +15,122 @@
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #include "import.h"
-#include "query.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace process {
+    
+    inline array_t<string_t>& NODEPP_ARGMNT(){ /*-*/ static array_t<string_t> /*-*/ out; return out; }
+    inline kernel_t& /*----*/ NODEPP_EVLOOP(){ thread_local static kernel_t /*---*/ out; return out; }
+    inline invoker_t<any_t> & NODEPP_INVOKE(){ thread_local static invoker_t<any_t> out; return out; }
+    
+    /*─······································································─*/
+
+    template< class... T >
+    int call   ( const T&... args ){ return NODEPP_INVOKE().emit( args... ); }
+
+    template< class... T >
+    void revoke( const T&... args ){ NODEPP_INVOKE().off( args... ); }
+
+extern "C" {
+    
+    inline int external_call( EM_STRING address, EM_VAL value ){
+        auto val = value.isUndefined() ? any_t() : any_t(value); 
+        auto out = call( string::to_u64( address ), val );
+        NODEPP_EVLOOP().wake(); return out;
+    }
+
+}
+
+    template< class... T >
+    uint64_t invoke( const T&... args ){ return NODEPP_INVOKE().add( args... ); }
+    
+    /*─······································································─*/
+
+    template< class... T >
+    void await( const T&... args ){ while(NODEPP_EVLOOP().await( args... )==1){/*unused*/} }
+
+    template< class... T >
+    ptr_t<task_t> loop( const T&... args ){ return NODEPP_EVLOOP().loop_add( args... ); }
+
+    template< class... T >
+    ptr_t<task_t> poll( const T&... args ){ return NODEPP_EVLOOP().poll_add( args... ); }
+
+    template< class... T >
+    ptr_t<task_t> add ( const T&... args ){ return NODEPP_EVLOOP().loop_add( args... ); }
+    
+    /*─······································································─*/
+
+    inline void clear( ptr_t<task_t> address ){ NODEPP_EVLOOP().off( address ); }
+    inline void   off( ptr_t<task_t> address ){ NODEPP_EVLOOP().off( address ); }
+    inline int   wake() /*-----------------*/ { return NODEPP_EVLOOP().wake (); }
+
+    /*─······································································─*/
+
+    inline bool should_close(){ return NODEPP_EVLOOP().should_close(); }
+    inline bool        empty(){ return NODEPP_EVLOOP().empty(); }
+    inline ulong        size(){ return NODEPP_EVLOOP().size (); }
+    inline void        clear(){ /*--*/ NODEPP_EVLOOP().clear(); }
+
+    /*─······································································─*/
+
+    inline void exit( int err=0 ){ 
+    if( should_close () ){ goto DONE; } do {
+        NODEPP_SHTDWN() = true; clear(); 
+    } while(0); DONE:; emscripten_force_exit(0); }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#include "bind.h"
+#include "os.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace process {
 
-    array_t<string_t> args;
-    
+    inline array_t<string_t>& arguments() { return NODEPP_ARGMNT(); }
+    inline kernel_t& /*----*/ kernel   () { return NODEPP_EVLOOP(); }
+
     /*─······································································─*/
 
-    void start(){ process::signal::start(); }
+    inline int next(){ 
+        /*--*/ next_time_interval  (); EM_NEXT();
+        /*--*/ NODEPP_ALLOC ().next();
+        return NODEPP_EVLOOP().next(); 
+    }
 
-    void start( int argc, char** args ){
-        int i=0; do {
-            if(!regex::test(args[i],"^\\?") ) {
-                process::args.push(args[i]);
-            } else { continue; }
-        }   while( i ++< argc - 1 ); process::start();
+    /*─······································································─*/
+
+    inline void start(){
+
+        NODEPP_SIGNAL().onSIGEXIT.once( [=](){ 
+        process::exit(0); }); signal::start();
+
+        MAIN_THREAD_EM_ASM({
+            Module.__handle__=( a )=>{ return emval_handles[a]; };
+        });
+
     }
 
     /*─······································································─*/
 
     template< class... T >
-    int  spawn( const T&... args ){ return ::system(args...); }
-
-    template< class... T >
-    void error( const T&... msg ){ _ERROR( msg... ); }
-
-    void exit( int err=0 ){ ::exit(err); }
-
-    void abort(){ ::abort(); }
+    void error( const T&... msg ){ NODEPP_THROW_ERROR( msg... ); }
 
     /*─······································································─*/
 
-    void stop(){
-        while( !process::empty() ){
-                process::next();
-                onSIGNEXT.emit();
-        }
+    inline void wait(){ 
+        while( !process::should_close() ){ process::next (); }
+        /*------------------------------*/ process::clear();
     }
 
 }}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+EM_BIND( "__call__", nodepp::process::external_call );
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

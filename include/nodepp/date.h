@@ -9,109 +9,12 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_DATE
-#define NODEPP_DATE
+#ifndef NODEPP_WASM_DATE
+#define NODEPP_WASM_DATE
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include <ctime>
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-namespace nodepp { namespace date {
-
-    uint now(){ return (uint)( time( nullptr ) * 1000 ); }
-    
-    /*─······································································─*/
-
-    uint year( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return (info->tm_year+1900); 
-    }
-    
-    /*─······································································─*/
-
-    uint month( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_mon; 
-    }
-    
-    /*─······································································─*/
-
-    uint day( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_mday; 
-    }
-    
-    /*─······································································─*/
-    
-    uint hour( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_hour; 
-    }
-    
-    /*─······································································─*/
-
-    uint minute( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_min; 
-    }
-    
-    /*─······································································─*/
-
-    uint second( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_sec; 
-    }
-    
-    /*─······································································─*/
-
-    uint weekday( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_wday; 
-    }
-    
-    /*─······································································─*/
-
-    uint monthday( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_mday; 
-    }
-    
-    /*─······································································─*/
-
-    uint yearday( const bool& UTC=false ){
-        time_t _time = time( nullptr ); struct tm *info;
-        if( UTC ) info = gmtime( &_time ); 
-        else info = localtime( &_time );
-        return info->tm_yday; 
-    }
-    
-    /*─······································································─*/
-
-    string_t fulltime(){
-        time_t _time = time( nullptr ); 
-        string_t data(ctime(&_time));
-        return data; 
-    }
-
-}}
+#include <emscripten.h>
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -119,103 +22,462 @@ namespace nodepp { class date_t {
 protected:
 
     struct NODE {
-        struct tm* info = nullptr;
-        time_t time =::time( nullptr );
+        bool utc;
+        uint day;
+        uint year;
+        uint hour;
+        uint month;
+        uint minute;
+        uint second;
     };  ptr_t<NODE> obj;
+
+    /*─······································································─*/
+
+    void set_time( ulong time, bool utc ) const noexcept {
+    auto out = EM_EVAL( NODEPP_STRINGIFY (
+        
+        let date = new Date(${1});
+        let out  = new Object(  );
+
+        if(${0}){ 
+            out["year"]   = date.getUTCFullYear(); 
+            out["second"] = date.getUTCSeconds ();
+            out["minute"] = date.getUTCMinutes ();
+            out["month"]  = date.getUTCMonth   ();
+            out["hour"]   = date.getUTCHours   ();
+            out["day"]    = date.getUTCDay     ();
+        } else { 
+            out["year"]   = date.getFullYear   (); 
+            out["second"] = date.getSeconds    ();
+            out["minute"] = date.getMinutes    ();
+            out["month"]  = date.getMonth      ();
+            out["hour"]   = date.getHours      ();
+            out["day"]    = date.getDay        ();
+        }
+
+    return out; ), utc, time ); obj->utc = utc;
+
+        obj->day    = out["day"]   .as<uint>();
+        obj->year   = out["year"]  .as<uint>();
+        obj->second = out["second"].as<uint>();
+        obj->hour   = out["hour"]  .as<uint>();
+        obj->month  = out["month"] .as<uint>();
+        obj->minute = out["minute"].as<uint>();
+
+    }
+
+    void get_time( bool utc ) const noexcept {
+    auto out = EM_EVAL( NODEPP_STRINGIFY (
+        
+        let date = new Date  ();
+        let out  = new Object();
+
+        if(${0}){ 
+            out["year"]   = date.getUTCFullYear(); 
+            out["second"] = date.getUTCSeconds ();
+            out["minute"] = date.getUTCMinutes ();
+            out["month"]  = date.getUTCMonth   ();
+            out["hour"]   = date.getUTCHours   ();
+            out["day"]    = date.getUTCDay     ();
+        } else { 
+            out["year"]   = date.getFullYear   (); 
+            out["second"] = date.getSeconds    ();
+            out["minute"] = date.getMinutes    ();
+            out["month"]  = date.getMonth      ();
+            out["hour"]   = date.getHours      ();
+            out["day"]    = date.getDay        ();
+        }
+
+    return out; ), utc ); obj->utc = utc;
+
+        obj->day    = out["day"]   .as<uint>();
+        obj->year   = out["year"]  .as<uint>();
+        obj->second = out["second"].as<uint>();
+        obj->hour   = out["hour"]  .as<uint>();
+        obj->month  = out["month"] .as<uint>();
+        obj->minute = out["minute"].as<uint>();
+
+    }
     
 public:
 
-    template< class... V > 
-    date_t( const V&... args ) noexcept : obj( new NODE() ) { set_time( args... ); }
+    template< class... V >
+    date_t( const V&... args ) noexcept : obj( 0UL ) { set_date( args... ); }
+
+    date_t() noexcept : obj( 0UL ) { set_date( false ); }
     
     /*─······································································─*/
 
-    void set_time( const bool& UTC=false ) const noexcept {  
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-    }
-    
-    /*─······································································─*/
-
-    void set_time( const time_t& stamp, const bool& UTC=false ) const noexcept {  
-                  obj->time = stamp;
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-    }
-    
-    /*─······································································─*/
-
-    void set_time( const uint& year, const bool& UTC=false ) const noexcept { 
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-        obj->info->tm_year = year; obj->time = mktime(obj->info);
-    }
-
-    void set_time( const uint& year, const uint& month, const bool& UTC=false ) const noexcept { 
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-        obj->info->tm_year = year; obj->info->tm_mon = month; 
-        obj->time = mktime(obj->info);
-    }
-
-    void set_time( const uint& year, const uint& month, const uint& day, const bool& UTC=false ) const noexcept { 
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-        obj->info->tm_year = year; obj->info->tm_mon = month; 
-        obj->info->tm_mday = day; obj->time = mktime(obj->info);
-    }
-
-    void set_time( const uint& year, const uint& month, const uint& day, const uint& hour, const bool& UTC=false ) const noexcept { 
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-        obj->info->tm_year = year; obj->info->tm_mon = month; 
-        obj->info->tm_mday = day; obj->info->tm_hour = hour; 
-        obj->time = mktime(obj->info);
-    }
-
-    void set_time( const uint& year, const uint& month, const uint& day, const uint& hour, const uint& min, const bool& UTC=false ) const noexcept { 
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-        obj->info->tm_year = year; obj->info->tm_mon = month; 
-        obj->info->tm_mday = day; obj->info->tm_hour = hour; 
-        obj->info->tm_min = min; obj->time = mktime(obj->info);
-    }
-
-    void set_time( const uint& year, const uint& month, const uint& day, const uint& hour, const uint& min, const uint& sec, const bool& UTC=false ) const noexcept { 
-        if( UTC ) obj->info = gmtime( &obj->time ); 
-        else      obj->info = localtime( &obj->time );
-        obj->info->tm_year = year; obj->info->tm_mon = month; 
-        obj->info->tm_mday = day; obj->info->tm_hour = hour; 
-        obj->info->tm_min = min; obj->info->tm_sec = sec;
-        obj->time = mktime(obj->info);
-    }
-    
-    /*─······································································─*/
-
-    void set_month( uint month ) const noexcept { obj->info->tm_mon  = month; obj->time = mktime(obj->info); }
-    void set_second( uint sec )  const noexcept { obj->info->tm_sec  = sec;   obj->time = mktime(obj->info); }
-    void set_minute( uint min )  const noexcept { obj->info->tm_min  = min;   obj->time = mktime(obj->info); }
-    void set_year( uint year )   const noexcept { obj->info->tm_year = year;  obj->time = mktime(obj->info); }
-    void set_hour( uint hour )   const noexcept { obj->info->tm_hour = hour;  obj->time = mktime(obj->info); }
-    void set_day( uint day )     const noexcept { obj->info->tm_mday = day;   obj->time = mktime(obj->info); }
+    bool operator==( const date_t& other ) const noexcept { return get_stamp()==other.get_stamp(); }
+    bool operator<=( const date_t& other ) const noexcept { return get_stamp()<=other.get_stamp(); }
+    bool operator>=( const date_t& other ) const noexcept { return get_stamp()>=other.get_stamp(); }
+    bool operator< ( const date_t& other ) const noexcept { return get_stamp()< other.get_stamp(); }
+    bool operator> ( const date_t& other ) const noexcept { return get_stamp()> other.get_stamp(); }
 
     /*─······································································─*/
 
-    string_t get_fulltime()      const noexcept { return (string_t)ctime(&obj->time); }
-    uint     get_year()          const noexcept { return obj->info->tm_year + 1900;   }
-    uint     get_monthday()      const noexcept { return (uint)obj->info->tm_mday;    }
-    uint     get_weekday()       const noexcept { return (uint)obj->info->tm_wday;    }
-    uint     get_yearday()       const noexcept { return (uint)obj->info->tm_yday;    }
-    uint     get_hour()          const noexcept { return (uint)obj->info->tm_hour;    }
-    uint     get_day()           const noexcept { return (uint)obj->info->tm_mday;    }
-    uint     get_month()         const noexcept { return (uint)obj->info->tm_mon;     }
-    uint     get_minute()        const noexcept { return (uint)obj->info->tm_min;     }
-    uint     get_second()        const noexcept { return (uint)obj->info->tm_sec;     }
-    uint     get_stamp()         const noexcept { return (uint)obj->time * 1000;      }
+    void operator+=( const date_t& other ) const noexcept {
+         set_stamp( get_stamp() + other.get_stamp(), obj->utc );
+    }
+
+    void operator-=( const date_t& other ) const noexcept {
+         set_stamp( get_stamp() - other.get_stamp(), obj->utc );
+    }
+
+    void operator*=( const date_t& other ) const noexcept {
+         set_stamp( get_stamp() * other.get_stamp(), obj->utc );
+    }
+
+    void operator/=( const date_t& other ) const noexcept {
+         set_stamp( get_stamp() / other.get_stamp(), obj->utc );
+    }
+
+    /*─······································································─*/
+
+    void set_stamp( const time_t& time, bool utc ) const noexcept {
+         set_time ( time, utc );
+   }
     
+    /*─······································································─*/
+
+    void set_date( bool utc ) const noexcept {
+         set_utc(utc); get_time( utc );
+    }
+
+    void set_date( uint year, bool utc ) const noexcept {
+         set_utc(utc); set_year(year);
+    }
+
+    void set_date( uint year, uint month, bool utc ) const noexcept {
+         set_utc(utc); set_year(year); set_month(month);
+    }
+
+    void set_date( uint year, uint month, uint day, bool utc ) const noexcept {
+         set_utc(utc); set_year(year); set_month(month); set_day(day);
+    }
+
+    void set_date( uint year, uint month, uint day, uint hour, bool utc ) const noexcept {
+         set_utc(utc); set_year(year); set_month(month); set_day(day); set_hour(hour);
+    }
+
+    void set_date( uint year, uint month, uint day, uint hour, uint min, bool utc ) const noexcept {
+         set_utc(utc); set_year(year); set_month(month); set_day(day); set_hour(hour); set_minute(min);
+    }
+
+    void set_date( uint year, uint month, uint day, uint hour, uint min, uint second, bool utc ) const noexcept {
+         set_utc(utc); set_year(year); set_month(month); set_day(day); set_hour(hour); set_minute(min); set_second(second);
+    }
+    
+    /*─······································································─*/
+    
+    void set_year  ( uint year  ) const noexcept { obj->year   = year;  }
+    void set_month ( uint month ) const noexcept { obj->month  = month; }
+    void set_second( uint sec   ) const noexcept { obj->second = sec;   }
+    void set_minute( uint min   ) const noexcept { obj->minute = min;   }
+    void set_hour  ( uint hour  ) const noexcept { obj->hour   = hour;  }
+    void set_day   ( uint day   ) const noexcept { obj->day    = day;   }
+    void set_utc   ( bool utc   ) const noexcept { obj->utc    = utc;   }
+
+    /*─······································································─*/
+
+    string_t get_fulltime() const noexcept { 
+
+        return string_t( EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+            }   return data.toString();
+            
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<EM_STRING>() );
+
+    }
+    
+    uint get_year() const noexcept { 
+
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCFullYear(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getFullYear(); 
+            }
+
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<uint>();
+        
+    }
+    
+    uint get_month() const noexcept {
+
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCMonth(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getMonth(); 
+            }
+
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<uint>();
+
+    }
+
+    uint get_hour() const noexcept { 
+        
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCHours(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getHours(); 
+            }
+
+        ),
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<uint>();
+
+    }
+    
+    uint get_day() const noexcept {
+        
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCDay(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getUTCDay(); 
+            }
+
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<uint>();
+
+    }
+
+    uint get_minute() const noexcept {
+        
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCMinutes(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getMinutes(); 
+            }
+
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<uint>();
+
+    }
+    
+    uint get_second() const noexcept {
+
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCSeconds(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getSeconds(); 
+            }
+
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<uint>();
+
+    }
+
+    size_t get_stamp() const noexcept { 
+
+        return EM_EVAL( NODEPP_STRINGIFY(
+            let data = new Date();
+
+            if( ${0} ){
+                data.setUTCDate   (${1});
+                data.setUTCYear   (${2});
+                data.setUTCHours  (${3});
+                data.setUTCMonth  (${4});
+                data.setUTCMinutes(${5});
+                data.setUTCSeconds(${6});
+                return data.getUTCSeconds(); 
+            } else {
+                data.setDate      (${1});
+                data.setYear      (${2});
+                data.setHours     (${3});
+                data.setMonth     (${4});
+                data.setMinutes   (${5});
+                data.setSeconds   (${6});
+                return data.getSeconds(); 
+            }
+
+        ), 
+            obj->utc , obj->day  , obj->year  , 
+            obj->hour, obj->month, obj->minute, 
+            obj->second 
+        ).as<size_t>();
+
+    }
 
 };}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+namespace nodepp {
+
+    inline date_t operator+( const date_t& A, const date_t& B ){
+        date_t C; C.set_stamp( A.get_stamp() + B.get_stamp(), false );
+        return C;
+    }
+
+    inline date_t operator-( const date_t& A, const date_t& B ){
+        date_t C; C.set_stamp( A.get_stamp() - B.get_stamp(), false );
+        return C;
+    }
+
+    inline date_t operator*( const date_t& A, const date_t& B ){
+        date_t C; C.set_stamp( A.get_stamp() * B.get_stamp(), false );
+        return C;
+    }
+
+    inline date_t operator/( const date_t& A, const date_t& B ){
+        date_t C; C.set_stamp( A.get_stamp() / B.get_stamp(), false );
+        return C;
+    }
+
+}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace date {
+
+    inline size_t now(){ return date_t().get_stamp(); }
+
+    inline string_t fulltime(){ return date_t().get_fulltime(); }
+
+    inline uint day( bool utc ){ return date_t(utc).get_day(); }
+
+    inline uint year( bool utc ){ return date_t(utc).get_year(); }
+
+    inline uint hour( bool utc ){ return date_t(utc).get_hour(); }
+
+    inline uint month( bool utc ){ return date_t(utc).get_month(); }
+
+    inline uint minute( bool utc ){ return date_t(utc).get_minute(); }
+
+    inline uint second( bool utc ){ return date_t(utc).get_second(); }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

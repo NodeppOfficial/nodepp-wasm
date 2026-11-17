@@ -1,65 +1,54 @@
-# Nodepp-EMCC
+# Nodepp-WASM: An Asynchronous Runtime for C++ ( WASM )
 
-Emscripten Nodepp port
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/platform-WASM-blue)](https://github.com/NodeppOfficial/nodepp)
+[![Valgrind Memory Test](https://img.shields.io/badge/memory-zero_leaks-green)](https://github.com/NodeppOfficial/nodepp/blob/main/benchmark/valgrind_benchmark/readme.md)
 
-## Dependencies 
-- **emscripten**
-    - 🪟: `pacman -S mingw-w64-ucrt-x86_64-emscripten`
-    - 🐧: `sudo apt install emscripten`
+Nodepp is an asynchronous C++ runtime that unifies application development under a single syntax, a single codebase, and a single execution model. It starts from a simple premise: you don't need a different language for every layer of your application. The same code that runs on a Linux server can run in a browser via WASM, on an ESP32, or on an Arduino Nano — without changes.
 
-## Features
+The inspiration doesn't come from a modern framework, but from Doom. Doom wasn't revolutionary for its graphics, but for its portability: it ran on hardware nobody imagined because its design didn't depend on a specific platform. That same philosophy guided Nodepp — a runtime so universal it runs on anything with a C++11 compiler, from 2KB of RAM to 64 cores. It's not a framework tied to an ecosystem. It's a runtime that adapts to the hardware, not the other way around.
 
-- **C++11 | C++14 | C++17 | c++20 | c++23** Compatible
-- Includes a **build-in JSON** parser / stringify system
-- Includes a **build-in RegExp** engine for processing text strings
-- Allows writing **C++** code as if writing in **NodeJS** or **Javascript**
-- Adds a high-level abstraction layer to simplify **C++** application development
-- Includes support for **HTTP | WS** making it easy to create networked applications
-- Includes an **Event Loop** that can handle multiple events and tasks on a single thread
-- Supports **Coroutines**, which allows running multiple tasks concurrently on a single thread
+Most runtimes grow until they can't be understood. Nodepp went the other direction. ~3,800 lines for the entire core. 2KB for the binary. 0% CPU when idle. No STL, no exceptions, no RTTI — not because they're bad, but because they aren't necessary. The result is a runtime small enough to fit on any controller and simple enough to audit completely. Nothing to trust. Nothing to hide.
 
-## Build & Run
+## Featured Projects
 
-```bash
-    em++ -o ./www/index.html main.cpp \
-    -I ./include -pthread \
-    -s PROXY_POSIX_SOCKETS \
-    -s PTHREAD_POOL_SIZE=8 \
-    -s ASYNCIFY=1 \
-    -s WASM=1 \
-    #--embed-file ./assets \
-```
+### **[Enigma Machine - Arduino Nano](https://wokwi.com/projects/449104127751150593)**: A fully functional Enigma machine running on 2KB of RAM.
+https://github.com/user-attachments/assets/9b870671-3854-444f-893d-40fdce31a629
 
-## Hello world
+### **[Spacesus.io](https://spacesus.io)**: Fullstack P2P multiplayer game built on Nodepp, WebRTC, and Raylib.
+https://github.com/user-attachments/assets/a8b4d56d-0291-4aa8-98e6-926116215f8f
+
+## Quick Start
+
 ```cpp
 #include <nodepp/nodepp.h>
 
 using namespace nodepp;
 
-void onMain() {
-    console::log("Hello World!");
+void onMain(){ 
+
+    auto addr = process::invoke([=]( any_t raw ){
+        console::log( "hello world!" );
+    return 1; });
+    
+    EM_EVAL( R"(
+        document.querySelector('body').innerHTML=`
+        <button onclick="Module.__call__('${0}',undefined);" > click </button>
+        `; // console.log('hello world!');    
+    )", addr );
+
+    process::add( coroutine::add( COROUTINE(){
+    coBegin
+
+        while( true ){
+            console::log( ">>", process::now() );
+        coDelay(1000); }
+
+    coFinish
+    }));
+
 }
 ```
 
-## Examples
-- Examples : [here](https://github.com/NodeppOficial/Nodepp/tree/main/examples)
-
-## FAQ
-- reddit : [/r/Cplusplus/](https://www.reddit.com/r/Cplusplus/comments/19e2kw3/write_asynchronous_code_with_c_nodepp/)
-  
-## Contribution
-
-If you want to contribute to **Nodepp**, you are welcome to do so! You can contribute in several ways:
-
-- ☕ Buying me a Coffee
-- 📢 Reporting bugs and issues
-- 📝 Improving the documentation
-- 📌 Adding new features or improving existing ones
-- 🧪 Writing tests and ensuring compatibility with different platforms
-- 🔍 Before submitting a pull request, make sure to read the contribution guidelines.
-
-**NOTE:** We don't use STD here, just Pure C++.
-
 ## License
-
-**Nodepp** is distributed under the MIT License. See the LICENSE file for more details.
+MIT. Use it anywhere.

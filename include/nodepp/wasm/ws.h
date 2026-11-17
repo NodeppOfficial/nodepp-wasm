@@ -1,0 +1,180 @@
+/*
+ * Copyright 2023 The Nodepp Project Authors. All Rights Reserved.
+ *
+ * Licensed under the MIT (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ */
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#ifndef NODEPP_WASM_WS
+#define NODEPP_WASM_WS
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { class ws_t {
+protected:
+
+    bool is_state( uchar value ) const noexcept {
+        if( obj->state & value ){ return true; }
+    return false; }
+
+    void set_state( uchar value ) const noexcept {
+    if( obj->state & STATE::FS_STATE_KILL ){ return; }
+        obj->state = value;
+    }
+
+    enum STATE : uchar {
+         FS_STATE_UNKNOWN = 0b00000000,
+         FS_STATE_OPEN    = 0b00000001,
+         FS_STATE_REUSE   = 0b01000000,
+         FS_STATE_CLOSE   = 0b00000010,
+         FS_STATE_READING = 0b00010000,
+         FS_STATE_WRITING = 0b00100000,
+         FS_STATE_KILL    = 0b00000100,
+         FS_STATE_STOP    = 0b00001000,
+         FS_STATE_DISABLE = 0b00001110
+    };
+
+protected:
+
+    struct NODE {
+        
+        uchar state = STATE::FS_STATE_CLOSE; 
+        EM_VAL    fd ; uchar_64 pd ;
+        uchar_64 addr; uchar_64 tag;
+        kernel_t krn ;
+
+       ~NODE(){ fd= EM_VAL::undefined(); }
+
+    };  ptr_t<NODE> obj;
+
+    void kill() const noexcept { 
+    if( !obj->fd.isUndefined() ){ obj->fd.call<EM_VAL>( "close" ); }
+         obj->state |= STATE::FS_STATE_KILL; 
+         process::revoke( obj->addr ); 
+    }
+
+public:
+
+    event_t<ws_t>      onConnect;
+    event_t<>          onDrain;
+    event_t<except_t>  onError;
+    event_t<>          onClose;
+    event_t<ws_t>      onOpen;
+    event_t<string_t>  onData;
+
+    /*─······································································─*/
+
+   ~ws_t() noexcept { if( obj.count() > 1 ) { return; } free(); }
+
+    /*─······································································─*/
+
+    ws_t( const string_t& url ) noexcept : obj( 0UL ) {
+        
+        auto self = type::bind( this );
+        obj->krn  = process::NODEPP_EVLOOP();
+        obj->addr = process::invoke([=]( any_t raw ){
+        auto value= raw.as<EM_VAL>(); self->obj->krn.wake();
+        switch( value["type"].as<int>() ){
+
+            case 3: self->onError.emit( string_t( value["data"].as<EM_STRING>() ) );
+            case 2: self->free(); break; 
+
+            case 4: self->obj->state = STATE::FS_STATE_OPEN;
+                    self->obj->fd    = value[ "data" ];
+            break;
+
+            case 0: self->onOpen   .emit(*self); 
+                    self->onConnect.emit(*self);
+            break;
+                
+            case 1: do {
+                auto buffer = string_t( value["data"].as<EM_STRING>() ); 
+                self->onData.emit( buffer ); 
+            } while(0); break;
+
+        } return 1; });
+
+        EM_PUSH( NODEPP_STRINGIFY ( 
+             const addr= "${1}";    
+        try{ const cli = new WebSocket( "${0}" );
+            
+            cli.binaryType= "arraybuffer";
+
+            cli.onclose   = (e) => { Module.__call__( addr, { type: 2 } ); };
+            cli.onopen    = (e) => { Module.__call__( addr, { type: 0 } ); };
+            cli.onmessage = (e) => { Module.__call__( addr, { type: 1, data: e.data } ); };
+            cli.onerror   = (e) => { Module.__call__( addr, { type: 3, data: "could not connect to the server" } ); };
+
+            /*--------------------*/ Module.__call__( addr, { type: 4, data: cli } );
+
+        } catch(e) {
+            Module.__call__( addr, { type: 3, data: "websocket not supported" } ); 
+        }), url, obj->addr );
+
+    }
+    
+    ws_t() noexcept : obj( 0UL ){}
+
+    /*─······································································─*/
+
+    void free() const noexcept {
+
+        if( is_state( STATE::FS_STATE_KILL  ) ){ return; } kill();
+        if(!is_state( STATE::FS_STATE_CLOSE ) ){ onDrain .emit (); }
+       
+        onClose.emit (); /*--------------*/
+        onError.clear(); onConnect.clear();
+        onClose.clear(); onData   .clear();
+        onDrain.clear(); onOpen   .clear();
+
+    }
+
+    void close() const noexcept {
+        if( is_state ( STATE::FS_STATE_DISABLE ) ){ return; } onDrain.emit(); 
+            set_state( STATE::FS_STATE_CLOSE   );
+    free(); }
+
+    /*─······································································─*/
+
+    bool    is_closed() const noexcept { return  is_state ( STATE::FS_STATE_DISABLE ) || obj->fd.isUndefined(); }
+    bool is_available() const noexcept { return !is_closed(); }
+    void set_reusable() const noexcept { obj->state |= STATE::FS_STATE_REUSE; }
+
+    /*─······································································─*/
+
+    uchar_64  get_fd() const noexcept { return (uchar_64) obj->fd.as_handle(); }
+    uchar_64& get_pd() const noexcept { return obj->pd ; }
+    uchar_64&    tag() const noexcept { return obj->tag; }
+
+    /*─······································································─*/
+
+    string_t read( ulong /*unused*/ ) const noexcept { return nullptr; }
+
+    int write( string_t msg ) const noexcept {
+        if( msg.empty() ){ return  0; } 
+        if( is_closed() ){ return -1; }
+        EM_PUSH( NODEPP_STRINGIFY ( try {
+
+            var ws = Module.__handle__ ( ${0} );
+            ws.send( decodeURIComponent(escape(window.atob( '${2}' ))) );
+
+        } catch(e){
+
+            Module.__call__( "${3}", { type: 3, data: "disconnected" } );
+
+        }), 
+            get_fd (), msg.size(), encoder::base64::atob( msg ), obj->addr
+        );  return msg.size();
+    }
+
+}; using tcp_t = ws_t; }
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

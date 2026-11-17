@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -18,135 +18,139 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp {
+namespace nodepp { class test_t { 
+protected:
 
-    class test_t { 
-    protected:
+    struct NODE {
+        function_t<int> callback;
+        string_t        name;
+    };  
 
-        struct NODE {
-            function_t<int> callback;
-            string_t        name;
-        };  
-        
-        struct DONE {
-            queue_t<NODE> queue;
-            void*  ev = nullptr;
-            int state = 1; 
-        };  ptr_t<DONE> obj;
-
-    public:
-
-        event_t<> onClose;
-        event_t<> onFail;
-        event_t<> onDone;
-        event_t<> onSkip;
-
-        /*-------------------------------------------------------------------*/
-
-        ~test_t() noexcept {
-            if( obj.count()  > 1 ){ return; }
-            if( obj->state == -1 ){ return; }
-   	        process::onSIGERR.off( obj->ev );
-            onClose.emit(); obj->state =-1;
-        }
-
-        test_t() noexcept : obj( new DONE() ) { 
-            auto self = type::bind( this );
-            obj->ev = process::onSIGERR.once([=]( ... ){ 
-                conio::error( "ERROR: " ); 
-                auto node = self->obj->queue.get(); 
-                conio::log( node->data.name );
-                conio::error( "FAILED\n\n" ); 
-            });
-        }
-
-        /*-------------------------------------------------------------------*/
-
-        template< class T >
-        void set( const string_t& name, const T& callback ) noexcept {
-            NODE node; 
-                 node.callback = callback;
-                 node.name     = name;
-            obj->queue.push( node );
-        }
-
-        /*-------------------------------------------------------------------*/
-
-        void   ignore() const noexcept { obj->state =-1; }
-
-        void unignore() const noexcept { obj->state = 1; }
-        
-        /*-------------------------------------------------------------------*/
-
-        void await() const noexcept {
-
-            auto x = obj->queue.first(); int result = 0;
-
-            while( x != nullptr && obj->state != -1 ){
-                conio::done("\nTEST:> "); conio::log( x->data.name, "\n" );
-                result = x->data.callback(); if ( result == 1 ){
-                    conio::done( "DONE: " ); 
-                    conio::log( x->data.name );
-                    conio::done( "PASSED\n\n" ); 
-                    this->onDone.emit();
-                } elif ( result == -1 ) {
-                    conio::error( "ERROR: " ); 
-                    conio::log( x->data.name );
-                    conio::error( "FAILED\n\n" ); 
-                    this->onFail.emit();
-                } else {
-                    conio::warn( "WARNING: " );
-                    console::warning( x->data.name );
-                    conio::warn( "SKIPPED\n\n" ); 
-                    this->onSkip.emit();
-                }   
-            x = x->next; process::next(); }
-
-            onClose.emit();
-
-        }
-        
-        /*-------------------------------------------------------------------*/
-
-        void run() const noexcept {
-            auto self = type::bind( this );
-
-            process::add([=](){
-                if( self->obj->state != 1 ){ return -1; }
-                static auto x = self->obj->queue.first();
-                int result = 0;
-            coStart
-
-                while( x != nullptr ){
-                    conio::done("\nTEST:> "); conio::log( x->data.name, "\n" );
-                    result = x->data.callback(); if ( result == 1 ){
-                        conio::done( "DONE: " );
-                        console::done( x->data.name ); 
-                        conio::done( "PASSED\n\n" ); 
-                        self->onDone.emit();
-                    } elif ( result == -1 ) {
-                        conio::error( "ERROR: " );
-                        console::error( x->data.name );
-                        conio::error( "FAILED\n\n" ); 
-                        self->onFail.emit();
-                    } else {
-                        conio::warn( "WARNING: " );
-                        console::warning( x->data.name );
-                        conio::warn( "SKIPPED\n\n" ); 
-                        self->onSkip.emit();
-                    }   x = x->next; coNext;
-                }
-
-                self->onClose.emit();
-
-            coStop
-            });
-
-        }
-
+    enum STATE : uchar {
+         TS_STATE_UNKNOWN = 0b00000000,
+         TS_STATE_OPEN    = 0b00000001,
+         TS_STATE_SKIP    = 0b00000010,
+         TS_STATE_CLOSED  = 0b00000100,
     };
+    
+    struct DONE {
+        queue_t<NODE> queue; uchar state = 0x01; 
+    };  ptr_t<DONE> obj;
 
-}
+public:
+
+    event_t<> onClose;
+    event_t<> onFail;
+    event_t<> onDone;
+    event_t<> onSkip;
+
+    /*─······································································─*/
+
+   ~test_t() noexcept { if( obj.count()> 1 ){ return; } free(); }
+
+    test_t() noexcept : obj( new DONE() ) { 
+        auto self = type::bind( this );
+    }
+
+    /*─······································································─*/
+
+    void free() const noexcept {
+        if( obj->state & STATE::TS_STATE_CLOSED ){ return; }
+            obj->state = STATE::TS_STATE_CLOSED; 
+        onClose.emit(); onClose.clear();
+    }
+
+    /*─······································································─*/
+
+    template< class T >
+    void set( const string_t& name, const T& callback ) noexcept {
+        NODE node; 
+             node.callback = callback;
+             node.name     = name;
+        obj->queue.push( node );
+    }
+
+    /*─······································································─*/
+
+    void   ignore() const noexcept { obj->state |= STATE::TS_STATE_SKIP; }
+
+    void unignore() const noexcept { obj->state &=~STATE::TS_STATE_SKIP; }
+    
+    /*─······································································─*/
+
+    void await() const noexcept { auto self=type::bind(this);
+        if( obj->state & STATE::TS_STATE_CLOSED ){ return; }
+
+        process::await( coroutine::add( COROUTINE(){ int c=0;
+        coBegin; 
+            self->obj->queue.set( self->obj->queue.first() );
+        coYield(1);
+
+            if( self->obj->state & STATE::TS_STATE_SKIP ){ coEnd; } do {
+                auto x = self->obj->queue.get();
+            if( x==nullptr ){ break; }
+
+            c = x->data.callback(); if ( c == 1 ){
+                console::log( "TEST:>", x->data.name ," PASSED" ); 
+                self->onDone.emit();
+            } elif ( c == -1 ) {
+                console::log( "TEST:>", x->data.name ," FAILED" ); 
+                self->onFail.emit();
+            } else {
+                console::log( "TEST:>", x->data.name ," SKIPPED" ); 
+                self->onSkip.emit();
+            }
+
+            } while(0);
+
+            do { auto  x =  self->obj->queue.get ();
+            if ( /*-*/ x == nullptr ){ self->free(); coEnd; } 
+            if ( x->next == nullptr ){ self->free(); coEnd; } 
+            } while(0); self->obj->queue.next();
+              
+        coGoto(1) ; coFinish
+        }));
+
+    }
+    
+    /*─······································································─*/
+
+    void run() const noexcept { auto self=type::bind( this );
+        if( obj->state & STATE::TS_STATE_CLOSED ){ return; }
+
+        process::add( coroutine::add( COROUTINE(){ int c=0;
+        coBegin; 
+            self->obj->queue.set( self->obj->queue.first() ); 
+        coYield(1);
+
+            if( self->obj->state & STATE::TS_STATE_SKIP ){ coEnd; } do {
+                auto x = self->obj->queue.get();
+            if( x==nullptr ){ break; }
+
+            c = x->data.callback(); if ( c == 1 ){
+                console::log( "TEST:>", x->data.name ," PASSED" ); 
+                self->onDone.emit();
+            } elif ( c == -1 ) {
+                console::log( "TEST:>", x->data.name ," FAILED" ); 
+                self->onFail.emit();
+            } else {
+                console::log( "TEST:>", x->data.name ," SKIPPED" ); 
+                self->onSkip.emit();
+            }
+
+            } while(0);
+
+            do { auto  x =  self->obj->queue.get ();
+            if ( /*-*/ x == nullptr ){ self->free(); coEnd; } 
+            if ( x->next == nullptr ){ self->free(); coEnd; } 
+            } while(0); self->obj->queue.next();
+              
+        coGoto(1) ; coFinish
+        }));
+
+    }
+
+};}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -181,3 +185,5 @@ namespace nodepp {
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

@@ -1,0 +1,93 @@
+/*
+ * Copyright 2023 The Nodepp Project Authors. All Rights Reserved.
+ *
+ * Licensed under the MIT (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ */
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#ifndef NODEPP_WASM_OS
+#define NODEPP_WASM_OS
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#include <emscripten/emscripten.h>
+#include <cerrno>
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace os {
+
+    inline uchar_64 rand() { 
+        /*-----------*/ uchar_64 msk = encoder::random::generate( process::now() );
+    thread_local static uchar_64 out = (uchar_64) &NODEPP_LOCAL_SHTDWN();
+        out = encoder::random::generate(out^ msk); return out; 
+    }
+    
+    /*─······································································─*/
+
+    inline bool is_little_endian(){
+        uchar_16 value = 0x01;
+        return ( (char*)&value )[0] == 0x01;
+    }
+
+    inline bool is_big_endian(){
+        uchar_16 value = 0x01;
+        return ( (char*)&value )[0] == 0x00;
+    }
+
+    /*.........................................................................*/
+
+    template< class... T >
+    inline void alert( T... args ){ EM_EVAL( "alert('${0}')", string::join( " ", args... ) ); }
+
+    template< class... T >
+    inline EM_VAL exec( string_t cmd, T... args ){ return EM_EVAL( cmd, args... ); }
+
+    template< class... T >
+    inline EM_VAL call( string_t cmd, T... args ){ return EM_EVAL( cmd, args... ); }
+
+    /*.........................................................................*/
+
+    inline void reset(){ NODEPP_RESET(); }
+
+    /*.........................................................................*/
+
+    inline string_t create_url_object( string_t data ) {
+        if( data.empty() ){ return nullptr; }
+        return string_t( call( NODEPP_STRINGIFY(
+            var tm = decodeURIComponent( escape(window.atob( '${0}' )) );
+            return URL.createObjectURL ( new Blob([ tm ]) );
+        ), encoder::base64::atob ( data ) ).as<EM_STRING>() );
+    }
+
+    inline void remove_url_object( string_t data ) {
+    if( !data.empty() ){ call( NODEPP_STRINGIFY(
+        return URL.revokeObjectURL( "${0}" );
+    ), data ); }}
+
+    /*.........................................................................*/
+
+    inline string_t resolve_origin( string_t path ) {
+    return string_t( call( "return window.origin" ).as<EM_STRING>() ) + path; }
+
+    /*─······································································─*/
+
+    inline string_t cwd(){ return string_t( EM_EVAL( "return Module.FS.cwd()" ).as<EM_STRING>() ); }
+    inline string_t tmp(){ return "/tmp"; }
+    inline uint    cpus(){ return 1; }
+
+    /*─······································································─*/
+
+    inline uint error(){ return errno; }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

@@ -14,11 +14,25 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#if   _KERNEL == NODEPP_KERNEL_WASM
-    #include "wasm/mutex.cpp"
-#else
+#if !defined( NODEPP_THREAD_SUPPORTED )
     #error "This OS Does not support mutex.h"
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#include "wasm/atomic.h"
+#include "wasm/mutex.h"
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace mutex {
+
+    template< class T, class... V >
+    function_t<int,V...> add( mutex_t mut, T cb, const V&... args ){
+        return [=](){ return mut.emit( cb, args... ); };
+    }
+
+}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

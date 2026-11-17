@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -14,104 +14,102 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-template< class T > T   min( const T& min, const T& max ){ return min < max ? min : max; }
-template< class T > T   max( const T& min, const T& max ){ return max > min ? max : min; }
-template< class T > T clamp( const T& val, const T& _min, const T& _max ){ return max( _min, min( _max, val ) ); }
+namespace nodepp { template< class... A > class coroutine_arg_t { 
+private:
+
+    using T = function_t<int,uchar_64&,uchar_64&,A...>;
+
+protected:
+
+    struct NODE {
+        T        callback; 
+        uchar_64 time =0 ;
+        uchar_64 state=0 ;
+    };  ptr_t<NODE> obj;
+
+public:
+
+    template< class V >
+    coroutine_arg_t( const V& callback ) noexcept : obj( 0UL ) { obj->callback = callback; }
+    coroutine_arg_t() /*--------------*/ noexcept : obj( 0UL ) {}
+
+    /*─······································································─*/
+
+    void set_state( uchar_64 value ) const noexcept { obj->state = value; }
+
+    uchar_64 get_state() const noexcept { return obj->state; }
+
+    uchar_64 get_delay() const noexcept {
+        if( obj->time>0 && obj->time>process::now() )
+          { return obj->time - process::now(); }
+            return 0ULL;
+    }
+
+    /*─······································································─*/
+
+    int operator()( const A&... args ) const {
+        if( get_delay()>0 ){ return 1; }
+        return obj->callback( obj->state, obj->time, args... );
+    }
+    
+    int emit( const A&... args ) const {
+        if( get_delay()>0 ){ return 1; }
+        return obj->callback( obj->state, obj->time, args... );
+    }
+
+};}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define _EERROR( EV, ... ) if ( EV.empty() ){ console::error(__VA_ARGS__); } \
-                           else EV.emit( except_t(__VA_ARGS__) );
-#define _ERROR( ... )      throw except_t (__VA_ARGS__);
+namespace nodepp    { using coroutine_t = coroutine_arg_t<>; 
+struct co_state_t   { uchar     flag =0; uchar_64  delay =0; int state=0; };
+struct generator_t  { uchar_64 _time_=0; uchar_64 _state_=0; };
+namespace coroutine { enum STATE : uchar {
+     CO_STATE_START = 0b00000001,
+     CO_STATE_YIELD = 0b00000010,
+     CO_STATE_BLOCK = 0b00000000,
+     CO_STATE_DELAY = 0b00000100,
+     CO_STATE_END   = 0b00001000
+}; }}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define onMain INIT(); int main( int argc, char** args ) { \
-   process::start( argc, args ); INIT(); \
-   process::stop(); return 0;            \
-}  void INIT
+namespace nodepp { namespace coroutine {
+
+    inline coroutine_t add( function_t<int, uchar_64&, uchar_64&> callback ) {
+        return coroutine_t( callback );
+    }
+
+    template< class... T, class V >
+    inline coroutine_arg_t<T...> add( V callback ) {
+        return coroutine_arg_t<T...>( callback );
+    }
+
+}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#define coDelay(VALUE)  do { static auto tm = process::millis()+VALUE; while( process::millis() < tm ){ coNext; } tm = process::millis()+VALUE; break; } while (0)
-#define coUDelay(VALUE) do { static auto tm = process::micros()+VALUE; while( process::micros() < tm ){ coNext; } tm = process::micros()+VALUE; break; } while (0)
-#define coWait(VALUE)   do { while( !VALUE ){ coNext; } } while(0)
+namespace nodepp { namespace coroutine {
+    inline co_state_t getno( int state=0, uchar_64 _state_=0, uchar_64 time=0 ){
+    thread_local static co_state_t tmp; co_state_t out; 
+    
+    out = tmp; tmp = co_state_t {};
 
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define coReturn(VALUE) do { _state_ = _LINE_; return VALUE; case _LINE_:; } while (0)
-#define coNext          do { _state_ = _LINE_; return 1;     case _LINE_:; } while (0)
-#define coAgain         do { _state_ = _LINE_; return 0;     case _LINE_:; } while (0)
-#define coGoto(VALUE)   do { _state_ = VALUE ; return 1;                   } while (0)
-#define coYield(VALUE)  do { _state_ = VALUE ; return 1;     case VALUE:;  } while (0)
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define coStart static int _state_ = 0; { switch(_state_) { case 0:;
-#define coEnd         do { _state_ = 0; return -1; } while (0)
-#define coStop           } _state_ = 0; return -1; }
-#define coSet(VALUE)       _state_ = VALUE
-#define coGet              _state_
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define GENERATOR(NAME) struct NAME : public generator_t
-#define gnStart { switch(_state_) { case 0:;
-#define gnStop  } _state_ = 0; return -1; }
-#define gnEmit    int operator()
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define _FUNC_  __PRETTY_FUNCTION__
-#define _NAME_  __FUNCTION__
-#define _DATE_  __DATE__
-#define _FILE_  __FILE__
-#define _LINE_  __LINE__
-#define _TIME_  __TIME__
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define CHUNK_TB( VALUE ) ( 1024 * 1024 * 1024 * 1024 * VALUE )
-#define CHUNK_GB( VALUE ) ( 1024 * 1024 * 1024 * VALUE )
-#define CHUNK_MB( VALUE ) ( 1024 * 1024 * VALUE )
-#define CHUNK_KB( VALUE ) ( 1024 * VALUE )
-#define CHUNK_B ( VALUE ) ( VALUE )
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define MAX_SOCKET SOMAXCONN
-#define CHUNK_SIZE 65536
-#define UNBFF_SIZE 4096
-#define TIMEOUT    1
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define typeof(DATA) (string_t){ typeid( DATA ).name() }
-
-struct generator_t { protected: int _state_ = 0; };
-
-#define ullong  unsigned long long int
-#define ulong   unsigned long int
-#define llong   long long int
-#define ldouble long double
-
-#define ushort  unsigned short
-#define uchar   unsigned char
-#define uint    unsigned int
-#define wchar   wchar_t
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define forEach( ITEM, CB ) for( auto& x : ITEM ){ CB( x ); }
-#define forEver() for (;;)
-#define elif else if
-
-/*────────────────────────────────────────────────────────────────────────────*/
-
-#define NODEPP_KERNEL_WASM 1
-
-#define _KERNEL NODEPP_KERNEL_WASM
+    tmp.state=_state_ ; if( time>0 ){ 
+        tmp.delay=time; /*------------*/
+        tmp.flag =STATE::CO_STATE_DELAY; goto DONE; 
+    } switch(state) {
+        case -1: tmp.flag=STATE::CO_STATE_END  ; break;
+        case  0: tmp.flag=STATE::CO_STATE_BLOCK; break;
+        case  1: tmp.flag=STATE::CO_STATE_YIELD; break;
+        default: tmp.flag=STATE::CO_STATE_START; break;
+    }
+    
+    DONE:; return out; }
+}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

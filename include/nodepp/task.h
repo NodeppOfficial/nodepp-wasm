@@ -4,7 +4,7 @@
  * Licensed under the MIT (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
- * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ * https://github.com/NodeppOfficial/nodepp/blob/main/LICENSE
  */
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -14,192 +14,36 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace process {
-
-namespace task {
-
-    queue_t<function_t<int>> queue;
-
-    void clear(){ queue.clear(); }
-
-    ulong size(){ return queue.size(); }
-
-    bool empty(){ return queue.empty(); }
-
-    void clear( void* address ){ *((bool*)( address )) = 0; }
-
-    template< class T, class... V >
-    void* add( T cb, const V&... arg ){ 
-        ptr_t<T>    clb = new T( cb );
-        ptr_t<bool> blk = new bool(0);
-        ptr_t<bool> out = new bool(1);
-        queue.push([=](){ 
-            if( *out==0 ){ return -1; }
-            if( *blk==1 ){ return  1; } *blk = 1;
-            int rs = (*clb) (arg...);   *blk = 0; 
-            return *out==0 ? -1 : rs; 
-        }); return (void*) &out;
-    } 
-
-    void next(){
-        if( queue.empty() ){ return; }
-          auto x = queue.get();
-          int  y = x->data();
-          if ( y == 1 ){ queue.next(); }
-        elif ( y <  0 ){ queue.erase( x ); }
-    }
-
-}
-
-    /*─······································································─*/
-
-namespace loop {
-
-    queue_t<function_t<int>> queue;
-
-    void clear(){ queue.clear(); }
-
-    ulong size(){ return queue.size(); }
-
-    bool empty(){ return queue.empty(); }
-
-    void clear( void* address ){ *((bool*)( address )) = 0; }
-
-    template< class T, class... V >
-    void* add( T cb, const V&... arg ){ 
-        ptr_t<T>    clb = new T( cb );
-        ptr_t<bool> blk = new bool(0);
-        ptr_t<bool> out = new bool(1);
-        queue.push([=](){ 
-            if( *out==0 ){ return -1; }
-            if( *blk==1 ){ return  1; } *blk = 1;
-            int rs = (*clb) (arg...);   *blk = 0; 
-            return *out==0 ? -1 : rs; 
-        }); return (void*) &out;
-    } 
-
-    void next(){
-        if( queue.empty() ){ return; }
-          auto x = queue.get();
-          int  y = x->data();
-          if ( y == 1 ){ queue.next(); }
-        elif ( y <  0 ){ queue.erase( x ); }
-    }
-
-}
-
-    /*─······································································─*/
-
-namespace poll {
-
-    queue_t<function_t<int>> queue;
-
-    void clear(){ queue.clear(); }
-
-    ulong size(){ return queue.size(); }
-
-    bool empty(){ return queue.empty(); }
-
-    void clear( void* address ){ *((bool*)( address )) = 0; }
-
-    template< class T, class... V >
-    void* add( T cb, const V&... arg ){ 
-        ptr_t<T>    clb = new T( cb );
-        ptr_t<bool> blk = new bool(0);
-        ptr_t<bool> out = new bool(1);
-        queue.push([=](){ 
-            if( *out==0 ){ return -1; }
-            if( *blk==1 ){ return  1; } *blk = 1;
-            int rs = (*clb) (arg...);   *blk = 0; 
-            return *out==0 ? -1 : rs; 
-        }); return (void*) &out;
-    } 
-
-    void next(){
-        if( queue.empty() ){ return; }
-          auto x = queue.get();
-          int  y = x->data();
-          if ( y == 1 ){ queue.next(); }
-        elif ( y <  0 ){ queue.erase( x ); }
-    }
-
-}
-
-}}
+namespace nodepp { struct task_t/**/ { uchar flag=0x00; uchar_64 auth; }; }
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-namespace nodepp { namespace process {
-    
-    int threads = 0; 
-    
-    /*─······································································─*/
+namespace nodepp { struct TASK_STATE { enum TYPE : uchar {
+    UNKNOWN = 0b00000000,
+    OPEN    = 0b00000001,
+    USED    = 0b00000010,
+    CLOSED  = 0b00000100,
+};};}
 
-    void clear(){ 
-        process::task::clear();
-        process::poll::clear(); 
-        process::loop::clear(); 
-        process::threads = 0; 
-    }
-    
-    /*─······································································─*/
+/*────────────────────────────────────────────────────────────────────────────*/
 
-    void clear( void* address ){
-         if( !address ){ return; }
-         *((bool*)address) = 0;
-    }
-    
-    /*─······································································─*/
+namespace nodepp { struct POLL_STATE { enum FLAG : uchar {
+    UNKNOWN = 0b00000000,
+    READ    = 0b00000010,
+    WRITE   = 0b00000001,
+    EDGE    = 0b10000000
+};}; }
 
-    bool empty(){ return ( 
-        process::task::empty() && 
-        process::poll::empty() && 
-        process::loop::empty() && 
-        process::threads < 1 
-    );}
+/*────────────────────────────────────────────────────────────────────────────*/
 
-    /*─······································································─*/
-
-    ulong size(){ 
-        return process::poll::size() + 
-               process::task::size() + 
-               process::loop::size() + 
-               process::threads      ; 
-    }
-
-    /*─······································································─*/
-
-    template< class... T >
-    void* add( const T&... args ){ return process::loop::add( args... ); }
-
-    /*─······································································─*/
-
-    int next(){ 
-        static int x = 0;
-    coStart
-
-        if( process::size() <= 0 ){ process::delay( TIMEOUT ); coGoto(0); }
-
-        while( x != 0 ){
-        if( !process::task::empty() ){ process::task::next(); coNext; x--; }
-        if( !process::loop::empty() ){ process::loop::next(); coNext; x--; }
-        if( !process::poll::empty() ){ process::poll::next(); coNext; x--; }   
-        }   
-            
-        x = process::size(); process::delay( TIMEOUT );
-
-    coStop
-    }
-
-    /*─······································································─*/
-
-    template< class T, class... V > 
-    void await( T cb, const V&... args ){
-         while( cb( args... ) != -1 ){ next(); }
-    }
-
-}}
+namespace nodepp { struct CO_STATE { enum STATE : int {
+    BLOCK =  0, DONE  = 1,
+    END   = -1, YIELD = 1,
+    WAIT  = -2  /*------*/
+};}; }
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 #endif
+
+/*────────────────────────────────────────────────────────────────────────────*/

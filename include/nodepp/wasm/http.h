@@ -1,0 +1,155 @@
+/*
+ * Copyright 2023 The Nodepp Project Authors. All Rights Reserved.
+ *
+ * Licensed under the MIT (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://github.com/NodeppOficial/nodepp/blob/main/LICENSE
+ */
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#ifndef NODEPP_WASM_FETCH
+#define NODEPP_WASM_FETCH
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { using header_t = map_t< string_t, string_t >; }
+namespace nodepp { struct fetch_t {
+
+    string_t  url    ;
+    string_t  body   ;
+    uchar     status ;
+    header_t  headers;
+    ulong     timeout= 60000;
+    string_t  method = "GET";
+
+};}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { class http_t : public stream_t { 
+public:
+
+    uint      status = 200;
+    string_t  version;
+    header_t  headers;
+
+    string_t  search;
+    string_t  method;
+    string_t  path  ;
+    
+    /*─······································································─*/
+
+    http_t( EM_VAL fd, ulong size=NODEPP_CHUNK_SIZE ) : stream_t( fd, EM_VAL::undefined(), size ) {} 
+
+    http_t() : stream_t() {}
+
+    /*─······································································─*/
+
+    promise_t<string_t,except_t> read_body( ulong timeout=60000UL ) const noexcept {
+           auto self = type::bind( this );
+    return promise_t<string_t,except_t> ([=](
+           res_t<string_t> res, rej_t<except_t> rej
+    ){
+        
+        auto time = process::now() + timeout;
+        auto body = ptr_t<string_t>( 0UL );
+
+        process::add([=](){ 
+
+            if( process::now() > time ){ rej( except_t( "timeout reached" ) ); return -1; }
+
+            while( self->is_available() ){
+                int c = self->__read( self->get_buffer_data(), self->get_buffer_size() );
+                if( c==-2 ){ return 1; }
+                if( c==-1 ){ break   ; }
+                body[0] = string_t ( self->get_buffer().slice(0,c) ); break;
+            }
+                
+            if( body[0].empty() ){ rej( except_t( "no data" ) ); }
+            else /*-----------*/ { res( body[0] ); }
+
+        return -1; });
+
+    }); }
+
+};}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace http {
+
+    inline promise_t<http_t,except_t> fetch( const fetch_t& fetch ) {
+    return promise_t<http_t,except_t>([=]( 
+           res_t<http_t> res, rej_t<except_t> rej 
+    ){
+
+        auto addr = process::invoke([=]( any_t raw ){ do {
+        auto value= raw.as<EM_VAL> ();
+
+            if( value["type"].as<int>() == 0 ){ 
+                rej( string_t( value["data"].as<EM_STRING>() ) ); 
+            break; }
+
+            auto keys = EM_GET("Object").call<EM_VAL>( "keys", value["headers"] );
+            int  len  = keys  ["length"].as  <int   >(); header_t hdrs;
+            auto tmp  = value ["headers"];
+
+            for( int x=len; x-->0; ){
+                 auto key = string_t( keys[x] .as<EM_STRING>() );
+                 auto val = string_t( tmp[key].as<EM_STRING>() );
+                 hdrs[key]= val;
+            }
+
+            auto uri  = value["url"]   .as<EM_STRING>();
+            auto stte = value["status"].as<int>();
+
+            http_t cli( value["data"] ); 
+                   cli.status  = stte;
+                   cli.headers = hdrs;
+                   cli.search  = url::search( uri );
+                   cli.path    = url::path  ( uri );
+                   cli.set_timeout( fetch.timeout );
+
+            res( cli );
+
+        } while(0); return -1; });
+
+        queue_t<string_t> obj; auto hdr = json::stringify( fetch.headers );
+
+        obj.push( "{" );
+        if( !fetch.body   .empty() ){ obj.push( string::join( "", "body:   \"", fetch.body   , "\"," ) ); }
+        if( !fetch.method .empty() ){ obj.push( string::join( "", "method: \"", fetch.method , "\"," ) ); }
+        if(  fetch.timeout > 0     ){ obj.push( string::join( "", "timeout:\"", fetch.timeout, "\"," ) ); }
+        if( !fetch.headers.empty() ){ obj.push( string::join( "", "headers:  ", hdr ) /*----------*/ ); }
+        obj.push( "}" ); EM_PUSH( R"( ( async ()=>{ try {
+            
+            const res = await fetch( "${0}", ${1} );
+            const headerObj = {};
+
+            res.headers.forEach((value, key)=>{ headerObj[key] = value; });
+
+            Module.__call__("${2}", {
+                type   : 1          , 
+                headers: res.headers,
+                url    : res.url    ,
+                status : res.status ,
+                data   : res.body   , 
+            });
+
+        } catch(err){
+
+            Module.__call__( "${2}", { type: 0, data: err.message });
+            
+        } })(); )", fetch.url, string::join( obj, "" ), addr );
+
+    }); }
+
+}}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#endif
+
+/*────────────────────────────────────────────────────────────────────────────*/
